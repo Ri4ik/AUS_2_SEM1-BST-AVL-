@@ -20,7 +20,7 @@ public class BST<N extends EntityNode<N>> {
 
     /** SK: protected, aby AVL mohol meniť koreň pri rotáciách. */
     protected TreeNode<N> root;
-    protected  int size;
+    protected int size;
 
     public int size() { return size; }
     public boolean isEmpty() { return size == 0; }
@@ -49,17 +49,18 @@ public class BST<N extends EntityNode<N>> {
         }
 
         // SK: po vložení iba aktualizujeme výšky smerom hore (bez rotácií v čistom BST)
-        TreeNode<N> prev = parents.pop(); // inserted node
+        parents.pop(); // inserted node
         while (!parents.isEmpty()) {
             TreeNode<N> p = parents.pop();
             updateHeight(p);
-            prev = p;
         }
         return true;
     }
 
     /* --------------------------- ITERATIVE FIND/CONTAINS --------------------------- */
+    /** Возвращает сам найденный элемент (или null), а не boolean. */
     public N find(N key) {
+        if (key == null) throw new IllegalArgumentException("Null keys not allowed");
         TreeNode<N> cur = root;
         while (cur != null) {
             int cmp = key.compareTo(cur.key);
@@ -68,6 +69,8 @@ public class BST<N extends EntityNode<N>> {
         }
         return null;
     }
+
+    /** Оставляем contains для удобства, но основной API — find/range. */
     public boolean contains(N key) { return find(key) != null; }
 
     /* --------------------------- ITERATIVE DELETE --------------------------- */
@@ -110,7 +113,6 @@ public class BST<N extends EntityNode<N>> {
             // deleting root
             root = repl;
             size--;
-            // SK: aktualizujeme výšky smerom nahor — nič nad koreňom nie je
             if (root != null) updateHeight(root);
             return true;
         } else {
@@ -186,6 +188,60 @@ public class BST<N extends EntityNode<N>> {
             if (n.right != null) s1.push(n.right);
         }
         while (!s2.isEmpty()) out.add(s2.pop().key);
+        return out;
+    }
+
+    /* --------------------------- RANGE SEARCH (ITERATIVE) --------------------------- */
+
+    /** Закрытый диапазон [lo, hi], in-order, без рекурсии. */
+    public List<N> range(N lo, N hi) {
+        return range(lo, true, hi, true);
+    }
+
+    /** Полуинтервал [lo, hiExclusive), удобно для бенчей. */
+    public List<N> rangeHalfOpen(N lo, N hiExclusive) {
+        return range(lo, true, hiExclusive, false);
+    }
+
+    /**
+     * Итеративный диапазонный поиск в стиле лекций:
+     *  1) lower_bound(lo): идём от корня, запоминая путь к первому узлу с key >= lo;
+     *  2) затем in-order итерация до hi (включительно/исключительно по флагам).
+     *
+     * Сложность: O(h + k), где h — высота, k — число найденных элементов.
+     */
+    public List<N> range(N lo, boolean loInc, N hi, boolean hiInc) {
+        if (lo == null || hi == null) throw new IllegalArgumentException("Null bounds not allowed");
+        if (lo.compareTo(hi) > 0) return Collections.emptyList();
+
+        ArrayList<N> out = new ArrayList<>();
+        Deque<TreeNode<N>> st = new ArrayDeque<>();
+        TreeNode<N> cur = root;
+
+        // === 1) lower_bound(lo): построить стек пути к первому узлу с key >= lo ===
+        while (cur != null) {
+            int cmp = cur.key.compareTo(lo);
+            if (cmp >= 0) { st.push(cur); cur = cur.left; }
+            else          { cur = cur.right; }
+        }
+
+        // === 2) in-order от lower_bound до hi ===
+        while (!st.isEmpty()) {
+            TreeNode<N> n = st.pop();
+
+            // верхняя граница
+            int cHi = n.key.compareTo(hi);
+            if (cHi > 0 || (cHi == 0 && !hiInc)) break;
+
+            // нижняя граница
+            int cLo = n.key.compareTo(lo);
+            boolean okLo = (cLo > 0) || (cLo == 0 && loInc);
+            if (okLo) out.add(n.key);
+
+            // шаг к inorder-наследнику: левый экстремум правого поддерева
+            TreeNode<N> r = n.right;
+            while (r != null) { st.push(r); r = r.left; }
+        }
         return out;
     }
 
