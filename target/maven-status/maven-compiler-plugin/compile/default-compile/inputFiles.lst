@@ -12,6 +12,15 @@ C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\myc
 C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\dto\TestWithPatient.java
 C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\DualBenchmark.java
 C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\EntityNode.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\App.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\controller\GuiController.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\model\GuiModel.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\UtilQueries.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\view\MainFrame.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\view\table\CountTableModel.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\view\table\PatientScoreTableModel.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\view\table\PatientTableModel.java
+C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\gui\view\table\TestTableModel.java
 C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\index\PatientByIdNode.java
 C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\index\TestByCodeNode.java
 C:\Users\Даниил Бережной\Desktop\AUS2\BST_du\src\main\java\com\mycompany\bst_du\index\TestByDateNode.java
