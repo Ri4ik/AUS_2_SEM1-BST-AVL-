@@ -34,10 +34,11 @@ public final class MainFrame extends JFrame {
 
         // Вкладки ввода
         JTabbedPane tabs = new JTabbedPane();
+        tabs.add("Demo Data", buildDemoPanel());
         tabs.add("Patients", buildPatientsPanel());
         tabs.add("Tests", buildTestsPanel());
         tabs.add("Queries", buildQueriesPanel());
-        tabs.add("Sickness (ops 10–16)", buildSicknessPanel());
+        tabs.add("Sickness (ops 10–16)", buildSicknessPanel()); 
         tabs.add("CSV / Service", buildCsvPanel());
 
         // Результаты
@@ -455,5 +456,55 @@ public final class MainFrame extends JFrame {
                 p.putInt("win.h", sz.height);
             }
         });
+    }
+    // ====== Demo Data ======
+    private JPanel buildDemoPanel() {
+        JPanel p = new JPanel(new GridBagLayout());
+        GridBagConstraints c = gbc();
+
+        JTextField tfPat = new JTextField("10", 6);
+        JTextField tfTst = new JTextField("20", 6);
+
+        JButton bGenPat = new JButton("Generate Patients");
+        bGenPat.addActionListener(e -> {
+            try {
+                int n = Integer.parseInt(tfPat.getText().trim());
+                appendLog(ctl.generatePatients(n));
+                appendCounts();
+            } catch (Exception ex) {
+                appendLog("Error generate patients: " + ex.getMessage());
+            }
+        });
+
+        JButton bGenTst = new JButton("Generate Tests");
+        bGenTst.addActionListener(e -> {
+            try {
+                int n = Integer.parseInt(tfTst.getText().trim());
+                appendLog(ctl.generateTests(n));
+                appendCounts();
+            } catch (Exception ex) {
+                appendLog("Error generate tests: " + ex.getMessage());
+            }
+        });
+
+        JButton bClear = new JButton("Clear All Data");
+        bClear.addActionListener(e -> {
+            try {
+                ctl.clearAll();
+                appendLog("All data cleared.");
+                appendCounts();
+            } catch (Exception ex) {
+                appendLog("Error clearAll: " + ex.getMessage());
+            }
+        });
+
+        int r=0;
+        addRow(p,c,r++, "Patients to generate:", tfPat);
+        addBtn(p,c,r++, bGenPat);
+        addRow(p,c,r++, "Tests to generate:", tfTst);
+        addBtn(p,c,r++, bGenTst);
+        addBtn(p,c,r++, bClear);
+
+        return p;
     }
 }

@@ -309,4 +309,46 @@ public final class GuiController {
     public List<PcrTest> modelAllByWorkstationInPeriod(long workstationId, LocalDate from, LocalDate toExclusive) {
         return model.allByWorkstationInPeriod(workstationId, from, toExclusive);
     }
+    
+    // --- Demo Data ---
+    public String generatePatients(int count) {
+        try {
+            java.util.Random rnd = new java.util.Random();
+            for (int i = 1; i <= count; i++) {
+                String id = String.format("P%03d", i + model.countPatients());
+                String fn = "Name" + (100 + rnd.nextInt(900));
+                String ln = "Surname" + (100 + rnd.nextInt(900));
+                java.time.LocalDate birth = java.time.LocalDate.of(
+                        1970 + rnd.nextInt(40), 1 + rnd.nextInt(12), 1 + rnd.nextInt(28));
+                model.insertPatient(GuiModel.mkPatient(id, fn, ln, birth));
+            }
+            return "Generated " + count + " patients.";
+        } catch (Exception e) {
+            return "Error generatePatients: " + e.getMessage();
+        }
+    }
+
+    public String generateTests(int count) {
+        try {
+            java.util.Random rnd = new java.util.Random();
+            java.util.List<String> pids = model.getAllPatientIds(); // добавим ниже в GuiModel
+            if (pids.isEmpty()) return "No patients available for tests.";
+
+            for (int i = 1; i <= count; i++) {
+                long code = 1000 + model.countTests() + i;
+                String pid = pids.get(rnd.nextInt(pids.size()));
+                java.time.Instant ts = java.time.Instant.now().minusSeconds(rnd.nextInt(60*60*24*365));
+                long ws = 10 + rnd.nextInt(10);
+                int dist = 1 + rnd.nextInt(5);
+                int reg = 10 + rnd.nextInt(5);
+                boolean pos = rnd.nextBoolean();
+                double val = 50 + rnd.nextDouble() * 50;
+                String note = pos ? "Positive" : "Negative";
+                model.insertTest(GuiModel.mkTest(code, pid, ts, ws, dist, reg, pos, val, note));
+            }
+            return "Generated " + count + " tests.";
+        } catch (Exception e) {
+            return "Error generateTests: " + e.getMessage();
+        }
+    }
 }

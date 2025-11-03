@@ -59,4 +59,8 @@ public final class GuiModel {
     }
     
      public void clearAll() { sys.clearAll(); }
+     
+     public java.util.List<String> getAllPatientIds() {
+        return sys.getAllPatientIds(); // реализуем в PcrSystem, если нет — обойдемся заглушкой
+    }
 }

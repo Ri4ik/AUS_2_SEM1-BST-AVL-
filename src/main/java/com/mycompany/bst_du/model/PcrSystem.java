@@ -483,4 +483,14 @@ public final class PcrSystem {
         list.sort((a,b) -> Double.compare(b.score, a.score));
         return list;
     }
+    // === Public read helpers ===
+    public java.util.List<String> getAllPatientIds() {
+        java.util.List<PatientByIdNode> nodes = idxPatients.inOrder(); // наши AVL in-order
+        java.util.ArrayList<String> out = new java.util.ArrayList<>(nodes.size());
+        for (PatientByIdNode n : nodes) {
+            // n.ref — это Patient
+            out.add(n.ref.patientId);
+        }
+        return out;
+    }
 }
