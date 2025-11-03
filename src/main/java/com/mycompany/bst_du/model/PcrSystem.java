@@ -1,26 +1,48 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ * PCR system — indexes on custom AVL/BST, CSV I/O without libraries.
  */
 package com.mycompany.bst_du.model;
 
 import com.mycompany.bst_du.AVL;
-import com.mycompany.bst_du.domain.Patient;
-import com.mycompany.bst_du.domain.PcrTest;
-import com.mycompany.bst_du.dto.*;
-import com.mycompany.bst_du.index.*;
+import com.mycompany.bst_du.BST;
 import com.mycompany.bst_du.StringNode;
 
-import java.io.*;
+import com.mycompany.bst_du.domain.Patient;
+import com.mycompany.bst_du.domain.PcrTest;
+
+import com.mycompany.bst_du.dto.DistrictCount;
+import com.mycompany.bst_du.dto.PatientScore;
+import com.mycompany.bst_du.dto.RegionCount;
+import com.mycompany.bst_du.dto.TestWithPatient;
+
+import com.mycompany.bst_du.index.PatientByIdNode;
+import com.mycompany.bst_du.index.TestByCodeNode;
+import com.mycompany.bst_du.index.TestByDateNode;
+import com.mycompany.bst_du.index.TestByDistrictDateNode;
+import com.mycompany.bst_du.index.TestByPatientTimeNode;
+import com.mycompany.bst_du.index.TestByRegionDateNode;
+import com.mycompany.bst_du.index.TestByWorkstationDateNode;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.time.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Центральная доменная логика: хранит все индексы (AVL) и реализует 21 операцию.
+ */
 public final class PcrSystem {
 
     // === Индексы (наши AVL) ===
@@ -33,22 +55,23 @@ public final class PcrSystem {
     private final AVL<TestByWorkstationDateNode> idxByWorkstationDate = new AVL<>();
 
     private static final ZoneId ZONE = ZoneId.systemDefault();
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter DATE    = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter INSTANT = DateTimeFormatter.ISO_INSTANT;
 
     // === Служебные вычисления дат ===
-    private static int ymd(LocalDate d){
-        return d.getYear()*10000 + d.getMonthValue()*100 + d.getDayOfMonth();
+    private static int ymd(LocalDate d) {
+        return d.getYear() * 10000 + d.getMonthValue() * 100 + d.getDayOfMonth();
     }
-    private static int ymd(Instant t){
+    private static int ymd(Instant t) {
         LocalDate ld = LocalDateTime.ofInstant(t, ZONE).toLocalDate();
         return ymd(ld);
     }
 
     // === Статистика/сервис ===
-    public int countPatients(){ return idxPatients.size(); }
-    public int countTests(){ return idxByCode.size(); }
-    public void clearAll(){
+    public int countPatients() { return idxPatients.size(); }
+    public int countTests()    { return idxByCode.size(); }
+
+    public void clearAll() {
         idxPatients.clear();
         idxByCode.clear();
         idxByPatientTime.clear();
@@ -59,17 +82,18 @@ public final class PcrSystem {
     }
 
     // === Базовые CRUD, которые используют индексы ===
-    public boolean addPatient(Patient p){
+    public boolean addPatient(Patient p) {
         if (p == null) return false;
         if (idxPatients.find(new PatientByIdNode(p.patientId, null)) != null) return false;
         return idxPatients.insert(new PatientByIdNode(p.patientId, p));
     }
 
-    public boolean removePatient(String patientId){
+    public boolean removePatient(String patientId) {
         if (patientId == null || patientId.isEmpty()) return false;
         PatientByIdNode cur = idxPatients.find(new PatientByIdNode(patientId, null));
         if (cur == null) return false;
 
+        // удалить все тесты пациента из всех индексов
         TestByPatientTimeNode lo = new TestByPatientTimeNode(patientId, Long.MIN_VALUE, Long.MIN_VALUE, null);
         TestByPatientTimeNode hi = new TestByPatientTimeNode(patientId, Long.MAX_VALUE, Long.MAX_VALUE, null);
         List<TestByPatientTimeNode> nodes = idxByPatientTime.range(lo, true, hi, true);
@@ -78,7 +102,7 @@ public final class PcrSystem {
         return idxPatients.delete(cur);
     }
 
-    public boolean addTest(PcrTest t){
+    public boolean addTest(PcrTest t) {
         if (t == null) return false;
         if (idxPatients.find(new PatientByIdNode(t.patientId, null)) == null) return false;
         if (idxByCode.find(new TestByCodeNode(t.testCode, null)) != null) return false;
@@ -103,13 +127,13 @@ public final class PcrSystem {
         return true;
     }
 
-    public boolean removeTest(long testCode){
+    public boolean removeTest(long testCode) {
         TestByCodeNode n = idxByCode.find(new TestByCodeNode(testCode, null));
         if (n == null) return false;
         return removeTestByRef(n.ref);
     }
 
-    private boolean removeTestByRef(PcrTest t){
+    private boolean removeTestByRef(PcrTest t) {
         if (t == null) return false;
         int y = ymd(t.timestamp);
         boolean ok = true;
@@ -124,9 +148,9 @@ public final class PcrSystem {
 
     // === 21 операций ===
 
-    public boolean op1_insertTest(PcrTest t){ return addTest(t); }
+    public boolean op1_insertTest(PcrTest t) { return addTest(t); }
 
-    public Optional<TestWithPatient> op2_findTestOfPatient(long testCode, String patientId){
+    public Optional<TestWithPatient> op2_findTestOfPatient(long testCode, String patientId) {
         TestByCodeNode tn = idxByCode.find(new TestByCodeNode(testCode, null));
         if (tn == null) return Optional.empty();
         PcrTest t = tn.ref;
@@ -136,7 +160,7 @@ public final class PcrSystem {
         return Optional.of(new TestWithPatient(t, pn.ref));
     }
 
-    public List<PcrTest> op3_allTestsOfPatientChrono(String patientId){
+    public List<PcrTest> op3_allTestsOfPatientChrono(String patientId) {
         TestByPatientTimeNode lo = new TestByPatientTimeNode(patientId, Long.MIN_VALUE, Long.MIN_VALUE, null);
         TestByPatientTimeNode hi = new TestByPatientTimeNode(patientId, Long.MAX_VALUE, Long.MAX_VALUE, null);
         List<TestByPatientTimeNode> nodes = idxByPatientTime.range(lo, true, hi, true);
@@ -145,55 +169,55 @@ public final class PcrSystem {
         return out;
     }
 
-    public List<PcrTest> op4_positiveByDistrictInPeriod(int district, LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op4_positiveByDistrictInPeriod(int district, LocalDate from, LocalDate toExclusive) {
         return filterPositive(rangeDistrict(district, from, toExclusive));
     }
 
-    public List<PcrTest> op5_allByDistrictInPeriod(int district, LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op5_allByDistrictInPeriod(int district, LocalDate from, LocalDate toExclusive) {
         return rangeDistrict(district, from, toExclusive);
     }
 
-    public List<PcrTest> op6_positiveByRegionInPeriod(int region, LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op6_positiveByRegionInPeriod(int region, LocalDate from, LocalDate toExclusive) {
         return filterPositive(rangeRegion(region, from, toExclusive));
     }
 
-    public List<PcrTest> op7_allByRegionInPeriod(int region, LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op7_allByRegionInPeriod(int region, LocalDate from, LocalDate toExclusive) {
         return rangeRegion(region, from, toExclusive);
     }
 
-    public List<PcrTest> op8_positiveInPeriod(LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op8_positiveInPeriod(LocalDate from, LocalDate toExclusive) {
         return filterPositive(rangeGlobal(from, toExclusive));
     }
 
-    public List<PcrTest> op9_allInPeriod(LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op9_allInPeriod(LocalDate from, LocalDate toExclusive) {
         return rangeGlobal(from, toExclusive);
     }
 
-    public List<com.mycompany.bst_du.domain.Patient> op10_sickByDistrictAtDate(int district, LocalDate atDate, int daysWindow){
+    public List<Patient> op10_sickByDistrictAtDate(int district, LocalDate atDate, int daysWindow) {
         return new ArrayList<>(computeSickSet(rangeDistrictWindow(district, atDate, daysWindow)));
     }
 
-    public List<PatientScore> op11_sickByDistrictAtDateSortedByValue(int district, LocalDate atDate, int daysWindow){
+    public List<PatientScore> op11_sickByDistrictAtDateSortedByValue(int district, LocalDate atDate, int daysWindow) {
         return sortScoresDesc(computeSickScoresWithDistrict(rangeDistrictWindow(district, atDate, daysWindow), district));
     }
 
-    public List<com.mycompany.bst_du.domain.Patient> op12_sickByRegionAtDate(int region, LocalDate atDate, int daysWindow){
+    public List<Patient> op12_sickByRegionAtDate(int region, LocalDate atDate, int daysWindow) {
         return new ArrayList<>(computeSickSet(rangeRegionWindow(region, atDate, daysWindow)));
     }
 
-    public List<com.mycompany.bst_du.domain.Patient> op13_sickEverywhereAtDate(LocalDate atDate, int daysWindow){
+    public List<Patient> op13_sickEverywhereAtDate(LocalDate atDate, int daysWindow) {
         return new ArrayList<>(computeSickSet(rangeGlobalWindow(atDate, daysWindow)));
     }
 
-    public List<PatientScore> op14_oneSickPerDistrictMaxValue(LocalDate atDate, int daysWindow){
+    public List<PatientScore> op14_oneSickPerDistrictMaxValue(LocalDate atDate, int daysWindow) {
         List<PcrTest> window = rangeGlobalWindow(atDate, daysWindow);
         class Best { int district; String pid; double val; }
         ArrayList<Best> acc = new ArrayList<>();
         for (PcrTest t : window) if (t.positive) {
             Best b = null;
             for (Best x : acc) if (x.district == t.district) { b = x; break; }
-            if (b == null) { b = new Best(); b.district=t.district; b.pid=t.patientId; b.val=t.value; acc.add(b); }
-            else if (t.value > b.val) { b.pid=t.patientId; b.val=t.value; }
+            if (b == null) { b = new Best(); b.district = t.district; b.pid = t.patientId; b.val = t.value; acc.add(b); }
+            else if (t.value > b.val) { b.pid = t.patientId; b.val = t.value; }
         }
         ArrayList<PatientScore> out = new ArrayList<>(acc.size());
         for (Best b : acc) {
@@ -204,49 +228,39 @@ public final class PcrSystem {
         return out;
     }
 
-    public List<DistrictCount> op15_districtsBySickCount(LocalDate atDate, int daysWindow){
-    List<PcrTest> window = rangeGlobalWindow(atDate, daysWindow);
-
-    // Для каждого района держим собственный AVL множества patientId
-    class DC { int district; AVL<StringNode> pids = new AVL<>(); }
-    ArrayList<DC> acc = new ArrayList<>();
-
-    for (PcrTest t : window) if (t.positive) {
-        DC dc = null;
-        for (DC x : acc) if (x.district == t.district) { dc = x; break; }
-        if (dc == null) { dc = new DC(); dc.district = t.district; acc.add(dc); }
-        dc.pids.insert(new StringNode(t.patientId)); // дубликаты отфильтрует AVL
+    public List<DistrictCount> op15_districtsBySickCount(LocalDate atDate, int daysWindow) {
+        List<PcrTest> window = rangeGlobalWindow(atDate, daysWindow);
+        class DC { int district; AVL<StringNode> pids = new AVL<>(); }
+        ArrayList<DC> acc = new ArrayList<>();
+        for (PcrTest t : window) if (t.positive) {
+            DC dc = null;
+            for (DC x : acc) if (x.district == t.district) { dc = x; break; }
+            if (dc == null) { dc = new DC(); dc.district = t.district; acc.add(dc); }
+            dc.pids.insert(new StringNode(t.patientId));
+        }
+        ArrayList<DistrictCount> out = new ArrayList<>(acc.size());
+        for (DC dc : acc) out.add(new DistrictCount(dc.district, dc.pids.size()));
+        out.sort((a, b) -> Integer.compare(b.count, a.count));
+        return out;
     }
 
-    ArrayList<DistrictCount> out = new ArrayList<>(acc.size());
-    for (DC dc : acc) out.add(new DistrictCount(dc.district, dc.pids.size()));
-    out.sort((a,b) -> Integer.compare(b.count, a.count));
-    return out;
-}
-
-
-    public List<RegionCount> op16_regionsBySickCount(LocalDate atDate, int daysWindow){
-    List<PcrTest> window = rangeGlobalWindow(atDate, daysWindow);
-
-    // Для каждого края держим собственный AVL множества patientId
-    class RC { int region; AVL<StringNode> pids = new AVL<>(); }
-    ArrayList<RC> acc = new ArrayList<>();
-
-    for (PcrTest t : window) if (t.positive) {
-        RC rc = null;
-        for (RC x : acc) if (x.region == t.region) { rc = x; break; }
-        if (rc == null) { rc = new RC(); rc.region = t.region; acc.add(rc); }
-        rc.pids.insert(new StringNode(t.patientId)); // дубликаты отфильтрует AVL
+    public List<RegionCount> op16_regionsBySickCount(LocalDate atDate, int daysWindow) {
+        List<PcrTest> window = rangeGlobalWindow(atDate, daysWindow);
+        class RC { int region; AVL<StringNode> pids = new AVL<>(); }
+        ArrayList<RC> acc = new ArrayList<>();
+        for (PcrTest t : window) if (t.positive) {
+            RC rc = null;
+            for (RC x : acc) if (x.region == t.region) { rc = x; break; }
+            if (rc == null) { rc = new RC(); rc.region = t.region; acc.add(rc); }
+            rc.pids.insert(new StringNode(t.patientId));
+        }
+        ArrayList<RegionCount> out = new ArrayList<>(acc.size());
+        for (RC rc : acc) out.add(new RegionCount(rc.region, rc.pids.size()));
+        out.sort((a, b) -> Integer.compare(b.count, a.count));
+        return out;
     }
 
-    ArrayList<RegionCount> out = new ArrayList<>(acc.size());
-    for (RC rc : acc) out.add(new RegionCount(rc.region, rc.pids.size()));
-    out.sort((a,b) -> Integer.compare(b.count, a.count));
-    return out;
-}
-
-
-    public List<PcrTest> op17_allByWorkstationInPeriod(long workstationId, LocalDate from, LocalDate toExclusive){
+    public List<PcrTest> op17_allByWorkstationInPeriod(long workstationId, LocalDate from, LocalDate toExclusive) {
         int y1 = ymd(from), y2 = ymd(toExclusive);
         TestByWorkstationDateNode lo = new TestByWorkstationDateNode(workstationId, y1, Long.MIN_VALUE, null);
         TestByWorkstationDateNode hi = new TestByWorkstationDateNode(workstationId, y2, Long.MIN_VALUE, null);
@@ -256,16 +270,16 @@ public final class PcrSystem {
         return out;
     }
 
-    public Optional<PcrTest> op18_findTestByCode(long testCode){
+    public Optional<PcrTest> op18_findTestByCode(long testCode) {
         TestByCodeNode n = idxByCode.find(new TestByCodeNode(testCode, null));
-        return n == null ? Optional.empty() : Optional.of(n.ref);
+        return (n == null) ? Optional.empty() : Optional.of(n.ref);
     }
 
-    public boolean op19_insertPatient(Patient p){ return addPatient(p); }
+    public boolean op19_insertPatient(Patient p) { return addPatient(p); }
 
-    public boolean op20_deleteTestByCode(long testCode){ return removeTest(testCode); }
+    public boolean op20_deleteTestByCode(long testCode) { return removeTest(testCode); }
 
-    public boolean op21_deletePatientWithTests(String patientId){ return removePatient(patientId); }
+    public boolean op21_deletePatientWithTests(String patientId) { return removePatient(patientId); }
 
     // === CSV (без библиотек), опирается на наши in-order/range ===
 
@@ -279,9 +293,9 @@ public final class PcrSystem {
             List<PatientByIdNode> nodes = idxPatients.inOrder();
             for (PatientByIdNode n : nodes) {
                 Patient p = n.ref;
-                w.write(esc(p.patientId)); w.write(';');
-                w.write(esc(p.firstName)); w.write(';');
-                w.write(esc(p.lastName));  w.write(';');
+                w.write(BST.csvEsc(p.patientId)); w.write(';');
+                w.write(BST.csvEsc(p.firstName)); w.write(';');
+                w.write(BST.csvEsc(p.lastName));  w.write(';');
                 w.write(DATE.format(p.birthDate));
                 w.write('\n');
             }
@@ -293,15 +307,15 @@ public final class PcrSystem {
             List<TestByDateNode> nodes = idxByDate.inOrder();
             for (TestByDateNode n : nodes) {
                 PcrTest t = n.ref;
-                w.write(Long.toString(t.testCode)); w.write(';');
-                w.write(esc(t.patientId));          w.write(';');
-                w.write(INSTANT.format(t.timestamp)); w.write(';');
-                w.write(Long.toString(t.workstationId)); w.write(';');
-                w.write(Integer.toString(t.district));   w.write(';');
-                w.write(Integer.toString(t.region));     w.write(';');
-                w.write(t.positive ? "1" : "0");    w.write(';');
-                w.write(Double.toString(t.value));  w.write(';');
-                w.write(esc(t.note));
+                w.write(Long.toString(t.testCode));       w.write(';');
+                w.write(BST.csvEsc(t.patientId));         w.write(';');
+                w.write(INSTANT.format(t.timestamp));     w.write(';');
+                w.write(Long.toString(t.workstationId));  w.write(';');
+                w.write(Integer.toString(t.district));    w.write(';');
+                w.write(Integer.toString(t.region));      w.write(';');
+                w.write(t.positive ? "1" : "0");          w.write(';');
+                w.write(Double.toString(t.value));        w.write(';');
+                w.write(BST.csvEsc(t.note));
                 w.write('\n');
             }
         }
@@ -317,9 +331,14 @@ public final class PcrSystem {
                 String line;
                 while ((line = r.readLine()) != null) {
                     if (line.isEmpty()) continue;
-                    String[] a = split(line);
+                    String[] a = BST.csvSplit(line);
                     if (a.length < 4) continue;
-                    Patient p = new Patient(unesc(a[0]), unesc(a[1]), unesc(a[2]), LocalDate.parse(a[3], DATE));
+                    Patient p = new Patient(
+                            BST.csvUnesc(a[0]),
+                            BST.csvUnesc(a[1]),
+                            BST.csvUnesc(a[2]),
+                            LocalDate.parse(a[3], DATE)
+                    );
                     addPatient(p);
                 }
             }
@@ -331,62 +350,26 @@ public final class PcrSystem {
                 String line;
                 while ((line = r.readLine()) != null) {
                     if (line.isEmpty()) continue;
-                    String[] a = split(line);
+                    String[] a = BST.csvSplit(line);
                     if (a.length < 9) continue;
                     long   code  = Long.parseLong(a[0]);
-                    String pid   = unesc(a[1]);
+                    String pid   = BST.csvUnesc(a[1]);
                     Instant ts   = Instant.parse(a[2]);
                     long   ws    = Long.parseLong(a[3]);
                     int    dist  = Integer.parseInt(a[4]);
                     int    reg   = Integer.parseInt(a[5]);
                     boolean pos  = "1".equals(a[6]) || "true".equalsIgnoreCase(a[6]);
                     double val   = Double.parseDouble(a[7]);
-                    String note  = unesc(a[8]);
+                    String note  = BST.csvUnesc(a[8]);
                     addTest(new PcrTest(code, pid, ts, ws, dist, reg, pos, val, note));
                 }
             }
         }
     }
 
-    // === Helpers: CSV split/escape, поиск пациента, сборки окон и т.п. ===
+    // === Helpers: диапазоны/фильтры/поиски ===
 
-    private static String esc(String s){
-        if (s == null) return "";
-        boolean needQ = s.indexOf(';')>=0 || s.indexOf('"')>=0 || s.indexOf('\n')>=0 || s.indexOf('\r')>=0;
-        String r = s.replace("\"", "\"\"");
-        return needQ ? "\"" + r + "\"" : r;
-    }
-    private static String unesc(String s){
-        if (s == null || s.isEmpty()) return "";
-        s = s.trim();
-        if (s.length()>=2 && s.charAt(0)=='"' && s.charAt(s.length()-1)=='"') {
-            String core = s.substring(1, s.length()-1);
-            return core.replace("\"\"", "\"");
-        }
-        return s;
-    }
-    private static String[] split(String line){
-        ArrayList<String> out = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-        boolean inQ = false;
-        for (int i=0;i<line.length();i++){
-            char c = line.charAt(i);
-            if (inQ) {
-                if (c=='"') {
-                    if (i+1<line.length() && line.charAt(i+1)=='"') { sb.append('"'); i++; }
-                    else inQ=false;
-                } else sb.append(c);
-            } else {
-                if (c=='"') inQ=true;
-                else if (c==';') { out.add(sb.toString()); sb.setLength(0); }
-                else sb.append(c);
-            }
-        }
-        out.add(sb.toString());
-        return out.toArray(new String[0]);
-    }
-
-    private List<PcrTest> rangeDistrict(int district, LocalDate from, LocalDate toExclusive){
+    private List<PcrTest> rangeDistrict(int district, LocalDate from, LocalDate toExclusive) {
         int y1 = ymd(from), y2 = ymd(toExclusive);
         TestByDistrictDateNode lo = new TestByDistrictDateNode(district, y1, Long.MIN_VALUE, null);
         TestByDistrictDateNode hi = new TestByDistrictDateNode(district, y2, Long.MIN_VALUE, null);
@@ -395,7 +378,8 @@ public final class PcrSystem {
         for (TestByDistrictDateNode n : nodes) out.add(n.ref);
         return out;
     }
-    private List<PcrTest> rangeRegion(int region, LocalDate from, LocalDate toExclusive){
+
+    private List<PcrTest> rangeRegion(int region, LocalDate from, LocalDate toExclusive) {
         int y1 = ymd(from), y2 = ymd(toExclusive);
         TestByRegionDateNode lo = new TestByRegionDateNode(region, y1, Long.MIN_VALUE, null);
         TestByRegionDateNode hi = new TestByRegionDateNode(region, y2, Long.MIN_VALUE, null);
@@ -404,7 +388,8 @@ public final class PcrSystem {
         for (TestByRegionDateNode n : nodes) out.add(n.ref);
         return out;
     }
-    private List<PcrTest> rangeGlobal(LocalDate from, LocalDate toExclusive){
+
+    private List<PcrTest> rangeGlobal(LocalDate from, LocalDate toExclusive) {
         int y1 = ymd(from), y2 = ymd(toExclusive);
         TestByDateNode lo = new TestByDateNode(y1, Long.MIN_VALUE, null);
         TestByDateNode hi = new TestByDateNode(y2, Long.MIN_VALUE, null);
@@ -413,82 +398,84 @@ public final class PcrSystem {
         for (TestByDateNode n : nodes) out.add(n.ref);
         return out;
     }
-    private List<PcrTest> rangeDistrictWindow(int district, LocalDate atDate, int daysWindow){
-        LocalDate from = atDate.minusDays(Math.max(0, daysWindow-1));
+
+    private List<PcrTest> rangeDistrictWindow(int district, LocalDate atDate, int daysWindow) {
+        LocalDate from = atDate.minusDays(Math.max(0, daysWindow - 1));
         LocalDate toEx = atDate.plusDays(1);
         return rangeDistrict(district, from, toEx);
     }
-    private List<PcrTest> rangeRegionWindow(int region, LocalDate atDate, int daysWindow){
-        LocalDate from = atDate.minusDays(Math.max(0, daysWindow-1));
+
+    private List<PcrTest> rangeRegionWindow(int region, LocalDate atDate, int daysWindow) {
+        LocalDate from = atDate.minusDays(Math.max(0, daysWindow - 1));
         LocalDate toEx = atDate.plusDays(1);
         return rangeRegion(region, from, toEx);
     }
-    private List<PcrTest> rangeGlobalWindow(LocalDate atDate, int daysWindow){
-        LocalDate from = atDate.minusDays(Math.max(0, daysWindow-1));
+
+    private List<PcrTest> rangeGlobalWindow(LocalDate atDate, int daysWindow) {
+        LocalDate from = atDate.minusDays(Math.max(0, daysWindow - 1));
         LocalDate toEx = atDate.plusDays(1);
         return rangeGlobal(from, toEx);
     }
-    private static List<PcrTest> filterPositive(List<PcrTest> src){
+
+    private static List<PcrTest> filterPositive(List<PcrTest> src) {
         ArrayList<PcrTest> out = new ArrayList<>(src.size());
         for (PcrTest t : src) if (t.positive) out.add(t);
         return out;
     }
-    private Patient getPatient(String patientId){
+
+    private Patient getPatient(String patientId) {
         PatientByIdNode n = idxPatients.find(new PatientByIdNode(patientId, null));
-        return n == null ? null : n.ref;
-    } 
-    private java.util.ArrayList<Patient> computeSickSet(List<PcrTest> window){
-    AVL<StringNode> uniq = new AVL<>();
-    for (PcrTest t : window) if (t.positive) {
-        uniq.insert(new StringNode(t.patientId));
+        return (n == null) ? null : n.ref;
     }
-    java.util.ArrayList<Patient> out = new java.util.ArrayList<>();
-    java.util.List<StringNode> ids = uniq.inOrder();
-    for (StringNode n : ids) {
-        Patient p = getPatient(n.getValue());
-        if (p != null) out.add(p);
-    }
-    return out;
-}
 
-   private ArrayList<PatientScore> computeSickScoresWithDistrict(List<PcrTest> window, int district){
-    // соберём уникальные patientId в окне
-    AVL<StringNode> uniq = new AVL<>();
-    for (PcrTest t : window) if (t.positive) uniq.insert(new StringNode(t.patientId));
-
-    ArrayList<PatientScore> out = new ArrayList<>();
-    for (StringNode id : uniq.inOrder()){
-        String pid = id.getValue();
-        double maxVal = Double.NEGATIVE_INFINITY;
-        for (PcrTest t : window){
-            if (t.positive && pid.equals(t.patientId)){
-                if (t.value > maxVal) maxVal = t.value;
-            }
-        }
-        if (maxVal > Double.NEGATIVE_INFINITY){
-            Patient p = getPatient(pid);
-            if (p != null) out.add(new PatientScore(p, maxVal, district)); // <<< ключевое изменение
-        }
-    }
-    return out;
-}
-    private static List<PatientScore> sortScoresDesc(ArrayList<PatientScore> list){
-        list.sort((a,b) -> Double.compare(b.score, a.score));
-        return list;
-    }
-    // === Public read helpers ===
-    public java.util.List<String> getAllPatientIds() {
-        java.util.List<PatientByIdNode> nodes = idxPatients.inOrder(); // наши AVL in-order
-        java.util.ArrayList<String> out = new java.util.ArrayList<>(nodes.size());
-        for (PatientByIdNode n : nodes) {
-            // n.ref — это Patient
-            out.add(n.ref.patientId);
+    private ArrayList<Patient> computeSickSet(List<PcrTest> window) {
+        AVL<StringNode> uniq = new AVL<>();
+        for (PcrTest t : window) if (t.positive) uniq.insert(new StringNode(t.patientId));
+        ArrayList<Patient> out = new ArrayList<>();
+        List<StringNode> ids = uniq.inOrder();
+        for (StringNode n : ids) {
+            Patient p = getPatient(n.getValue());
+            if (p != null) out.add(p);
         }
         return out;
-    } 
-    
-    public Patient findPatientById(String patientId){
+    }
+
+    private ArrayList<PatientScore> computeSickScoresWithDistrict(List<PcrTest> window, int district) {
+        AVL<StringNode> uniq = new AVL<>();
+        for (PcrTest t : window) if (t.positive) uniq.insert(new StringNode(t.patientId));
+
+        ArrayList<PatientScore> out = new ArrayList<>();
+        for (StringNode id : uniq.inOrder()) {
+            String pid = id.getValue();
+            double maxVal = Double.NEGATIVE_INFINITY;
+            for (PcrTest t : window) {
+                if (t.positive && pid.equals(t.patientId)) {
+                    if (t.value > maxVal) maxVal = t.value;
+                }
+            }
+            if (maxVal > Double.NEGATIVE_INFINITY) {
+                Patient p = getPatient(pid);
+                if (p != null) out.add(new PatientScore(p, maxVal, district)); // district не теряется
+            }
+        }
+        return out;
+    }
+
+    private static List<PatientScore> sortScoresDesc(ArrayList<PatientScore> list) {
+        list.sort((a, b) -> Double.compare(b.score, a.score));
+        return list;
+    }
+
+    // === Public read helpers (для GUI) ===
+    public List<String> getAllPatientIds() {
+        List<PatientByIdNode> nodes = idxPatients.inOrder();
+        ArrayList<String> out = new ArrayList<>(nodes.size());
+        for (PatientByIdNode n : nodes) out.add(n.ref.patientId);
+        return out;
+    }
+
+    public Patient findPatientById(String patientId) {
         PatientByIdNode n = idxPatients.find(new PatientByIdNode(patientId, null));
-        return n == null ? null : n.ref;
+        return (n == null) ? null : n.ref;
     }
 }

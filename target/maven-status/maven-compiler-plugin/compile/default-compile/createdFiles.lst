@@ -11,6 +11,7 @@ com\mycompany\bst_du\model\PcrSystem$1RC.class
 com\mycompany\bst_du\DualBenchmark.class
 com\mycompany\bst_du\gui\view\table\PatientScoreTableModel.class
 com\mycompany\bst_du\AvlIntAdapter.class
+com\mycompany\bst_du\BST$1Task.class
 com\mycompany\bst_du\DemoPcrSystem.class
 com\mycompany\bst_du\Tester.class
 com\mycompany\bst_du\AVL.class

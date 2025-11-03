@@ -1,8 +1,13 @@
 /* ========================= com/mycompany/bst_du/BST.java ========================= */
 package com.mycompany.bst_du;
 
-import java.util.*;
-import java.util.function.Consumer;
+import java.util.*; 
+import java.util.function.Function;
+import java.nio.file.*;
+import java.nio.charset.StandardCharsets;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 /**
  * Generic, non-recursive BST with height bookkeeping (for AVL subclass).
@@ -250,5 +255,184 @@ public class BST<N extends EntityNode<N>> {
     protected static <N extends EntityNode<N>> void updateHeight(TreeNode<N> x) {
         if (x == null) return;
         x.height = 1 + Math.max(h(x.left), h(x.right));
+    }
+    /* ========================================================================
+       ==================== CSV SUPPORT (NO LIBRARIES) ========================
+       ======================================================================== */
+
+    /** Экранирует поле (разделитель — ';'). */
+    public static String csvEsc(String s){
+        if (s == null) return "";
+        boolean needQ = s.indexOf(';')>=0 || s.indexOf('"')>=0 || s.indexOf('\n')>=0 || s.indexOf('\r')>=0;
+        String r = s.replace("\"", "\"\"");
+        return needQ ? "\"" + r + "\"" : r;
+    }
+
+    /** Снимает экранирование поля. */
+    public static String csvUnesc(String s){
+        if (s == null || s.isEmpty()) return "";
+        s = s.trim();
+        if (s.length()>=2 && s.charAt(0)=='"' && s.charAt(s.length()-1)=='"') {
+            String core = s.substring(1, s.length()-1);
+            return core.replace("\"\"", "\"");
+        }
+        return s;
+    }
+
+    /** Разбивает CSV-строку по ';', поддерживая кавычки и удвоенные кавычки. */
+    public static String[] csvSplit(String line){
+        ArrayList<String> out = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean inQ = false;
+        for (int i=0;i<line.length();i++){
+            char c = line.charAt(i);
+            if (inQ) {
+                if (c=='"') {
+                    if (i+1<line.length() && line.charAt(i+1)=='"') { sb.append('"'); i++; }
+                    else inQ=false;
+                } else sb.append(c);
+            } else {
+                if (c=='"') inQ=true;
+                else if (c==';') { out.add(sb.toString()); sb.setLength(0); }
+                else sb.append(c);
+            }
+        }
+        out.add(sb.toString());
+        return out.toArray(new String[0]);
+    }
+
+    /**
+     * Запись дерева в CSV-файл в порядке in-order.
+     * @param file     путь к файлу
+     * @param encoder  функция (узел) -> строка без перевода строки
+     */
+    public void exportCsv(Path file, Function<N, String> encoder) throws IOException {
+        if (file == null) throw new IllegalArgumentException("file required");
+        Path parent = file.getParent();
+        if (parent != null) Files.createDirectories(parent);
+
+        try (BufferedWriter w = Files.newBufferedWriter(
+                file, StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+
+            List<N> nodes = this.inOrder();
+            for (N n : nodes) {
+                if (n == null) continue;
+                String line = encoder.apply(n);
+                if (line != null && !line.isEmpty()) {
+                    w.write(line);
+                    w.write('\n');
+                }
+            }
+        }
+    }
+
+    /**
+     * Чтение CSV в дерево.
+     * @param file         путь к файлу
+     * @param lineDecoder  функция (строка CSV) -> готовый узел N (или null для пропуска строки)
+     * @param sorted       true: строки уже отсортированы по ключу — используем O(n) сборку;
+     *                     false: вставляем по одной (O(n log n)).
+     * @param skipHeader   true: пропустить первую строку
+     * @return количество успешно импортированных записей
+     */
+    public int importCsv(Path file, Function<String, N> lineDecoder, boolean sorted, boolean skipHeader) throws IOException {
+        if (file == null || !Files.exists(file)) return 0;
+
+        if (!sorted) {
+            int ok = 0;
+            try (BufferedReader r = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+                String line;
+                if (skipHeader) r.readLine();
+                while ((line = r.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
+                    try {
+                        N node = lineDecoder.apply(line);
+                        if (node != null && this.insert(node)) ok++;
+                    } catch (Exception ex) {
+                        // пропускаем битую строку
+                    }
+                }
+            }
+            return ok;
+        } else {
+            ArrayList<N> entries = new ArrayList<>();
+            try (BufferedReader r = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+                String line;
+                if (skipHeader) r.readLine();
+                while ((line = r.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
+                    try {
+                        N node = lineDecoder.apply(line);
+                        if (node != null) entries.add(node);
+                    } catch (Exception ex) {
+                        // пропуск
+                    }
+                }
+            }
+            if (entries.isEmpty()) return 0;
+            buildBalancedFromSorted(entries);
+            return entries.size();
+        }
+    }
+
+    /** Итеративная сборка идеально сбалансированного BST из отсортированного списка ключей (по compareTo). */
+    protected void buildBalancedFromSorted(List<N> sorted) {
+        if (sorted == null || sorted.isEmpty()) { clear(); return; }
+
+        // дерево собираем из готовых TreeNode без insert — O(n)
+        this.root = null;
+        this.size = sorted.size();
+
+        class Task {
+            int lo, hi;
+            TreeNode<N> parent;
+            boolean attachLeft;
+            Task(int lo, int hi, TreeNode<N> parent, boolean attachLeft){
+                this.lo=lo; this.hi=hi; this.parent=parent; this.attachLeft=attachLeft;
+            }
+        }
+
+        int mid = sorted.size()/2;
+        TreeNode<N> r = new TreeNode<>(sorted.get(mid));
+        this.root = r;
+
+        Deque<Task> st = new ArrayDeque<>();
+        if (mid-1 >= 0) st.push(new Task(0, mid-1, r, true));
+        if (mid+1 <= sorted.size()-1) st.push(new Task(mid+1, sorted.size()-1, r, false));
+
+        while (!st.isEmpty()){
+            Task t = st.pop();
+            if (t.lo > t.hi) continue;
+            int m = t.lo + (t.hi - t.lo)/2;
+            TreeNode<N> node = new TreeNode<>(sorted.get(m));
+            if (t.attachLeft) t.parent.left = node; else t.parent.right = node;
+
+            if (m-1 >= t.lo) st.push(new Task(t.lo, m-1, node, true));
+            if (m+1 <= t.hi) st.push(new Task(m+1, t.hi, node, false));
+        }
+
+        // пересчёт высот post-order (итеративно)
+        recomputeHeightsIterative();
+    }
+
+    /** Итеративный post-order для пересчёта height у всех узлов. */
+    protected void recomputeHeightsIterative() {
+        if (root == null) return;
+        Deque<TreeNode<N>> s1 = new ArrayDeque<>();
+        Deque<TreeNode<N>> s2 = new ArrayDeque<>();
+        s1.push(root);
+        while (!s1.isEmpty()){
+            TreeNode<N> n = s1.pop();
+            s2.push(n);
+            if (n.left  != null) s1.push(n.left);
+            if (n.right != null) s1.push(n.right);
+        }
+        while (!s2.isEmpty()){
+            TreeNode<N> n = s2.pop();
+            updateHeight(n);
+        }
     }
 }
