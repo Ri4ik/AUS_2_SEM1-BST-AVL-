@@ -256,7 +256,12 @@ public final class GuiController {
         return sb.toString();
     }
     private String fmtTest(PcrTest t) {
-        return "code=" + t.testCode + ", pid=" + t.patientId + ", ts=" + t.timestamp
+        Patient p = model.findPatientById(t.patientId);
+        String pStr = (p == null)
+                ? "unknown"
+                : (p.firstName + " " + p.lastName + " (" + p.birthDate + ")");
+        return "code=" + t.testCode + ", pid=" + t.patientId + " [" + pStr + "]"
+                + ", ts=" + t.timestamp
                 + ", ws=" + t.workstationId + ", dist=" + t.district + ", reg=" + t.region
                 + ", pos=" + t.positive + ", val=" + t.value + ", note=" + t.note;
     }
@@ -351,4 +356,7 @@ public final class GuiController {
             return "Error generateTests: " + e.getMessage();
         }
     }
+    
+    
+    
 }

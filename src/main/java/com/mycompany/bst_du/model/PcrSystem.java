@@ -174,7 +174,7 @@ public final class PcrSystem {
     }
 
     public List<PatientScore> op11_sickByDistrictAtDateSortedByValue(int district, LocalDate atDate, int daysWindow){
-        return sortScoresDesc(computeSickScores(rangeDistrictWindow(district, atDate, daysWindow)));
+        return sortScoresDesc(computeSickScoresWithDistrict(rangeDistrictWindow(district, atDate, daysWindow), district));
     }
 
     public List<com.mycompany.bst_du.domain.Patient> op12_sickByRegionAtDate(int region, LocalDate atDate, int daysWindow){
@@ -451,34 +451,27 @@ public final class PcrSystem {
     return out;
 }
 
-    private ArrayList<PatientScore> computeSickScores(List<PcrTest> window){
-    // 1) Собираем уникальные patientId через наш AVL
+   private ArrayList<PatientScore> computeSickScoresWithDistrict(List<PcrTest> window, int district){
+    // соберём уникальные patientId в окне
     AVL<StringNode> uniq = new AVL<>();
-    for (PcrTest t : window) {
-        if (t.positive) {
-            uniq.insert(new StringNode(t.patientId)); // дубликаты отсечёт AVL
-        }
-    }
+    for (PcrTest t : window) if (t.positive) uniq.insert(new StringNode(t.patientId));
 
-    // 2) Для каждого уникального пациента считаем максимум значения среди его положительных тестов в окне
     ArrayList<PatientScore> out = new ArrayList<>();
-    for (StringNode idNode : uniq.inOrder()) {
-        String pid = idNode.getValue();
-
+    for (StringNode id : uniq.inOrder()){
+        String pid = id.getValue();
         double maxVal = Double.NEGATIVE_INFINITY;
-        for (PcrTest t : window) {
-            if (t.positive && pid.equals(t.patientId)) {
+        for (PcrTest t : window){
+            if (t.positive && pid.equals(t.patientId)){
                 if (t.value > maxVal) maxVal = t.value;
             }
         }
-
-        if (maxVal > Double.NEGATIVE_INFINITY) {
+        if (maxVal > Double.NEGATIVE_INFINITY){
             Patient p = getPatient(pid);
-            if (p != null) out.add(new PatientScore(p, maxVal));
+            if (p != null) out.add(new PatientScore(p, maxVal, district)); // <<< ключевое изменение
         }
     }
     return out;
-} 
+}
     private static List<PatientScore> sortScoresDesc(ArrayList<PatientScore> list){
         list.sort((a,b) -> Double.compare(b.score, a.score));
         return list;
@@ -492,5 +485,10 @@ public final class PcrSystem {
             out.add(n.ref.patientId);
         }
         return out;
+    } 
+    
+    public Patient findPatientById(String patientId){
+        PatientByIdNode n = idxPatients.find(new PatientByIdNode(patientId, null));
+        return n == null ? null : n.ref;
     }
 }

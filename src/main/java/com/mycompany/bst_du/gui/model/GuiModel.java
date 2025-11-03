@@ -63,4 +63,6 @@ public final class GuiModel {
      public java.util.List<String> getAllPatientIds() {
         return sys.getAllPatientIds(); // реализуем в PcrSystem, если нет — обойдемся заглушкой
     }
+     
+     public Patient findPatientById(String id){ return sys.findPatientById(id); }
 }

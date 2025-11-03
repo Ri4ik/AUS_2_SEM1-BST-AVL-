@@ -65,7 +65,7 @@ public final class MainFrame extends JFrame {
         JTextField tfLn = new JTextField(10);
         JTextField tfBirth = new JTextField(10);
 
-        JButton bIns = new JButton("Insert Patient");
+        JButton bIns = new JButton("19) Insert Patient");
         bIns.addActionListener(e -> {
             String msg = ctl.insertPatient(tfId.getText().trim(), tfFn.getText().trim(),
                     tfLn.getText().trim(), tfBirth.getText().trim());
@@ -74,7 +74,7 @@ public final class MainFrame extends JFrame {
         });
 
         JTextField tfDel = new JTextField(10);
-        JButton bDel = new JButton("Delete Patient + Tests");
+        JButton bDel = new JButton("21) Delete Patient + Tests");
         bDel.addActionListener(e -> {
             String msg = ctl.deletePatient(tfDel.getText().trim());
             appendLog(msg);
@@ -108,7 +108,7 @@ public final class MainFrame extends JFrame {
         JTextField tVal  = new JTextField(6);
         JTextField tNote = new JTextField(20);
 
-        JButton bIns = new JButton("Insert Test");
+        JButton bIns = new JButton("1) Insert Test");
         bIns.addActionListener(e -> {
             String msg = ctl.insertTest(tCode.getText().trim(), tPid.getText().trim(),
                     tTs.getText().trim(), tWs.getText().trim(), tDist.getText().trim(),
@@ -119,7 +119,7 @@ public final class MainFrame extends JFrame {
         });
 
         JTextField fCode = new JTextField(8);
-        JButton bFind = new JButton("Find Test by Code → Tests table");
+        JButton bFind = new JButton("18) Find Test by Code → Tests table");
         bFind.addActionListener(e -> {
             List<PcrTest> list = ctl.findTestByCodeAsList(fCode.getText().trim());
             showTests(list);
@@ -127,11 +127,22 @@ public final class MainFrame extends JFrame {
         });
 
         JTextField dCode = new JTextField(8);
-        JButton bDel = new JButton("Delete Test by Code");
+        JButton bDel = new JButton("20) Delete Test by Code");
+//        bDel.addActionListener(e -> {
+//            String msg = ctl.deleteTestByCode(dCode.getText().trim());
+//            appendLog(msg);
+//            appendCounts();
+//        });
         bDel.addActionListener(e -> {
-            String msg = ctl.deleteTestByCode(dCode.getText().trim());
-            appendLog(msg);
-            appendCounts();
+            String code = dCode.getText().trim();
+            int ask = JOptionPane.showConfirmDialog(this,
+                    "Delete test " + code + " permanently?", "Confirm delete (20)",
+                    JOptionPane.YES_NO_OPTION);
+            if (ask == JOptionPane.YES_OPTION) {
+                String msg = ctl.deleteTestByCode(code);
+                appendLog(msg);
+                appendCounts();
+            }
         });
 
         int r=0;
@@ -157,7 +168,7 @@ public final class MainFrame extends JFrame {
 
         // --- op3: tests of patient chrono ---
         JTextField pid = new JTextField(8);
-        JButton bPid = new JButton("Tests of Patient (chrono) → Tests table");
+        JButton bPid = new JButton("3) Tests of Patient (chrono) → Tests table");
         bPid.addActionListener(e -> {
             List<PcrTest> list = com.mycompany.bst_du.gui.UtilQueries.testsOfPatient(ctl, pid.getText().trim());
             showTests(list);
@@ -169,39 +180,39 @@ public final class MainFrame extends JFrame {
 
         // --- district ---
         JTextField dist = new JTextField(6);
-        JButton bDistAll = new JButton("District ALL → Tests table");
+        JButton bDistAll = new JButton("5) District ALL → Tests table");
         bDistAll.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.district(ctl, dist.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), false)
         ));
-        JButton bDistPos = new JButton("District POS → Tests table");
+        JButton bDistPos = new JButton("4) District POS → Tests table");
         bDistPos.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.district(ctl, dist.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
         // --- region ---
         JTextField reg = new JTextField(6);
-        JButton bRegAll = new JButton("Region ALL → Tests table");
+        JButton bRegAll = new JButton("7) Region ALL → Tests table");
         bRegAll.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.region(ctl, reg.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), false)
         ));
-        JButton bRegPos = new JButton("Region POS → Tests table");
+        JButton bRegPos = new JButton("6) Region POS → Tests table");
         bRegPos.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.region(ctl, reg.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
         // --- global ---
-        JButton bGAll = new JButton("Global ALL → Tests table");
+        JButton bGAll = new JButton("9) Global ALL → Tests table");
         bGAll.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.global(ctl, qFrom.getText().trim(), qToEx.getText().trim(), false)
         ));
-        JButton bGPos = new JButton("Global POS → Tests table");
+        JButton bGPos = new JButton("8) Global POS → Tests table");
         bGPos.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.global(ctl, qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
         // --- workstation ---
         JTextField ws = new JTextField(8);
-        JButton bWs = new JButton("Workstation ALL → Tests table");
+        JButton bWs = new JButton("17)Workstation ALL → Tests table");
         bWs.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.workstation(ctl, ws.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim())
         ));
@@ -209,7 +220,7 @@ public final class MainFrame extends JFrame {
         // --- op2: Find test of patient (code+pid) ---
         JTextField f2Code = new JTextField(8);
         JTextField f2Pid  = new JTextField(8);
-        JButton bFindOp2 = new JButton("Find test of patient (op2) → Tests table");
+        JButton bFindOp2 = new JButton("2)Find test of patient  → Tests table");
         bFindOp2.addActionListener(e -> {
             List<PcrTest> list = ctl.findTestOfPatientAsList(f2Code.getText().trim(), f2Pid.getText().trim());
             showTests(list);
@@ -221,14 +232,14 @@ public final class MainFrame extends JFrame {
         addRow(p,c,r++, "From (YYYY-MM-DD):", qFrom);
         addRow(p,c,r++, "ToEx (YYYY-MM-DD):", qToEx);
         addRow(p,c,r++, "District:", dist);
-        addBtnInline(p,c,r-1, bDistAll); addBtnInline(p,c,r-1, bDistPos);
+        addBtnRow(p,c,r++, bDistAll, bDistPos);
         addRow(p,c,r++, "Region:", reg);
-        addBtnInline(p,c,r-1, bRegAll); addBtnInline(p,c,r-1, bRegPos);
+        addBtnRow(p,c,r++, bRegAll, bRegPos);
         addBtn(p,c,r++, bGAll); addBtn(p,c,r++, bGPos);
         addRow(p,c,r++, "Workstation ID:", ws); addBtn(p,c,r++, bWs);
 
-        addRow(p,c,r++, "op2 Code:", f2Code);
-        addRow(p,c,r++, "op2 Patient ID:", f2Pid);
+        addRow(p,c,r++, "2) Find: Code", f2Code);
+        addRow(p,c,r++, "2) Find: Patient ID:", f2Pid);
         addBtn(p,c,r++, bFindOp2);
 
         return p;
@@ -332,14 +343,27 @@ public final class MainFrame extends JFrame {
         });
 
         JButton bClear = new JButton("Clear ALL");
+//        bClear.addActionListener(e -> {
+//            appendLog(ctl.clearAll());
+//            ((TestTableModel) testsTable.getModel()).setData(java.util.List.of());
+//            PatientTableModel m = new PatientTableModel();
+//            m.setData(java.util.List.of());
+//            peopleTable.setModel(m);
+//            appendCounts();
+//        });
         bClear.addActionListener(e -> {
-            appendLog(ctl.clearAll());
-            ((TestTableModel) testsTable.getModel()).setData(java.util.List.of());
-            PatientTableModel m = new PatientTableModel();
-            m.setData(java.util.List.of());
-            peopleTable.setModel(m);
-            appendCounts();
-        });
+            int ask = JOptionPane.showConfirmDialog(this,
+                    "Clear ALL data (patients and tests)?", "Confirm clear ",
+                    JOptionPane.YES_NO_OPTION);
+            if (ask == JOptionPane.YES_OPTION){
+                appendLog(ctl.clearAll());
+                ((TestTableModel) testsTable.getModel()).setData(java.util.List.of());
+                PatientTableModel m = new PatientTableModel();
+                m.setData(java.util.List.of());
+                peopleTable.setModel(m);
+                appendCounts();
+            }
+        }); 
 
         int r=0;
         addRow(p,c,r++, "Directory:", dir);
@@ -427,6 +451,13 @@ public final class MainFrame extends JFrame {
         f.gridx = 2; f.gridy = r; f.gridwidth = 1; f.fill = GridBagConstraints.NONE; f.weightx = 0;
         p.add(b, f);
     }
+    private static void addBtnRow(JPanel p, GridBagConstraints c, int r, JButton... buttons) {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+    for (JButton b : buttons) row.add(b);
+    GridBagConstraints f = (GridBagConstraints)c.clone();
+    f.gridx = 0; f.gridy = r; f.gridwidth = 2; f.fill = GridBagConstraints.NONE; f.weightx = 0;
+    p.add(row, f);
+}
 
     private void appendLog(String line) {
         log.append(line);
@@ -487,23 +518,23 @@ public final class MainFrame extends JFrame {
             }
         });
 
-        JButton bClear = new JButton("Clear All Data");
-        bClear.addActionListener(e -> {
-            try {
-                ctl.clearAll();
-                appendLog("All data cleared.");
-                appendCounts();
-            } catch (Exception ex) {
-                appendLog("Error clearAll: " + ex.getMessage());
-            }
-        });
+//        JButton bClear = new JButton("Clear All Data");
+//        bClear.addActionListener(e -> {
+//            try {
+//                ctl.clearAll();
+//                appendLog("All data cleared.");
+//                appendCounts();
+//            } catch (Exception ex) {
+//                appendLog("Error clearAll: " + ex.getMessage());
+//            }
+//        });
 
         int r=0;
         addRow(p,c,r++, "Patients to generate:", tfPat);
         addBtn(p,c,r++, bGenPat);
         addRow(p,c,r++, "Tests to generate:", tfTst);
         addBtn(p,c,r++, bGenTst);
-        addBtn(p,c,r++, bClear);
+//        addBtn(p,c,r++, bClear);
 
         return p;
     }
