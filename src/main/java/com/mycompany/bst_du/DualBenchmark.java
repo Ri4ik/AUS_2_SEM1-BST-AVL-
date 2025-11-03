@@ -4,9 +4,9 @@ package com.mycompany.bst_du;
 import java.util.*;
 
 /**
- * Универсальный бенчмарк: сравнивает две произвольные структуры (через IntSetStructure)
- * по полному набору операций из задания S1.
- * Теперь «intervalové hľadanie» измеряем по СПИСКАМ (rangeList), как в лекциях.
+ * SK: Univerzálny benchmark: porovnáva dve ľubovoľné štruktúry (cez IntSetStructure)
+ * podľa plnej sady operácií zo scenára S1.
+ * SK: „Intervalové hľadanie“ meriame cez ZOZNAMY (rangeList), v súlade s prednáškami.
  */
 public final class DualBenchmark {
 
@@ -20,7 +20,7 @@ public final class DualBenchmark {
         final int[] deleteKeys = new int[cfg.DELETE_COUNT];
         final int[] findKeys   = new int[cfg.FIND_COUNT];
 
-        // ---------- Структура A ----------
+        // ---------- Štruktúra A ----------
         System.out.println("\n--- " + nameA + " ---");
         warmup(A, cfg);
 
@@ -57,7 +57,7 @@ public final class DualBenchmark {
         long t12 = System.nanoTime();
         printStat(nameA, "max", cfg.MAX_COUNT, t11, t12);
 
-        // ---------- Структура B ----------
+        // ---------- Štruktúra B ----------
         System.out.println("\n--- " + nameB + " ---");
         warmup(B, cfg);
 
@@ -140,7 +140,7 @@ public final class DualBenchmark {
         return hits;
     }
 
-    /** Теперь берём ИМЕННО список, проверяем ≥500, суммируем total_hits как суммарную длину списков. */
+    /** SK: Berieme PRÁVE zoznam; vyžadujeme veľkosť ≥ minHits a sčítame total_hits ako súčet dĺžok zoznamov. */
     private static long rangeStrictViaLists(IntSetStructure S, SplittableRandom rnd,
                                             int domain, int width, int acceptedNeeded, int minHits) {
         int accepted = 0;

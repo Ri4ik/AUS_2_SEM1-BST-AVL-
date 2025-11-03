@@ -1,23 +1,27 @@
 package com.mycompany.bst_du;
 
+/**
+ * SK: Konfiguračná trieda pre benchmark — definuje počty operácií,
+ * rozsahy dát a počiatočné seed hodnoty pre generátory.
+ */
 public final class BenchConfig {
-    public final int INSERT_COUNT;
-    public final int DELETE_COUNT;
-    public final int FIND_COUNT;
-    public final int RANGE_QUERY_COUNT;
-    public final int MIN_COUNT;
-    public final int MAX_COUNT;
+    public final int INSERT_COUNT;       // SK: počet vkladaní
+    public final int DELETE_COUNT;       // SK: počet mazaní
+    public final int FIND_COUNT;         // SK: počet vyhľadávaní
+    public final int RANGE_QUERY_COUNT;  // SK: počet intervalových dopytov
+    public final int MIN_COUNT;          // SK: počet volaní min()
+    public final int MAX_COUNT;          // SK: počet volaní max()
 
-    public final int DOMAIN;
-    public final int INTERVAL_WIDTH;
+    public final int DOMAIN;             // SK: maximálny rozsah hodnôt (0..DOMAIN)
+    public final int INTERVAL_WIDTH;     // SK: šírka intervalov pri range testoch
 
-    public final long SEED_INSERT;
-    public final long SEED_WARMUP;
-    public final long SEED_FIND_PICK;
-    public final long SEED_RANGE_A;
-    public final long SEED_RANGE_B;
+    public final long SEED_INSERT;       // SK: seed pre generátor vkladania
+    public final long SEED_WARMUP;       // SK: seed pre warm-up fázu
+    public final long SEED_FIND_PICK;    // SK: seed pre výber prvkov na vyhľadávanie
+    public final long SEED_RANGE_A;      // SK: seed pre dolné hranice intervalov
+    public final long SEED_RANGE_B;      // SK: seed pre horné hranice intervalov
 
-    public final int  WARMUP_INSERTS;
+    public final int  WARMUP_INSERTS;    // SK: počet prvkov pre zahriatie (warm-up)
 
     public BenchConfig(int INSERT, int DELETE, int FIND, int RANGE, int MIN, int MAX,
                        int DOMAIN, int WIDTH,
@@ -42,6 +46,10 @@ public final class BenchConfig {
         this.WARMUP_INSERTS = WARMUP_INSERTS;
     }
 
+    /**
+     * SK: Predvolená konfigurácia pre hlavný benchmark scenár (s1).
+     * Určená pre veľké testy výkonnosti s 10 miliónmi vkladov.
+     */
     public static BenchConfig s1Default() {
         return new BenchConfig(
                 10_000_000, 2_000_000, 5_000_000, 1_000_000, 2_000_000, 2_000_000,

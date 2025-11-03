@@ -4,8 +4,8 @@ package com.mycompany.bst_du;
 import java.util.List;
 
 /**
- * Единый контракт для сравнения упорядоченных целочисленных структур.
- * Диапазон трактуем как полуинтервал [lo, hi) с возрастанием.
+ * SK: Jednotný kontrakt pre porovnávanie usporiadaných celočíselných štruktúr.
+ * Interval chápeme ako polouzavretý [lo, hi) so vzostupným zoradením.
  */
 public interface IntSetStructure {
     boolean insert(int key);
@@ -14,21 +14,21 @@ public interface IntSetStructure {
     int     size();
     void    clear();
 
-    /** @return минимальный ключ или Integer.MIN_VALUE, если структура пуста. */
+    /** @return minimálny kľúč alebo Integer.MIN_VALUE, ak je štruktúra prázdna. */
     int minOrSentinel();
 
-    /** @return максимальный ключ или Integer.MAX_VALUE, если структура пуста. */
+    /** @return maximálny kľúč alebo Integer.MAX_VALUE, ak je štruktúra prázdna. */
     int maxOrSentinel();
 
     /**
-     * Возвращает ОТСОРТИРОВАННЫЙ список элементов в полуинтервале [lo, hi).
-     * Используется в функциональных проверках и в бенчмарке «по спискам».
+     * SK: Vráti ZORADENÝ zoznam prvkov v polouzavretom intervale [lo, hi).
+     * Používa sa vo funkčných testoch a v „listovom“ benchmarku.
      */
     List<Integer> rangeList(int lo, int hiExclusive);
 
     /**
-     * Быстрый подсчёт для микро-бенчей (по умолчанию через список).
-     * Основной S1-бенч теперь использует именно rangeList(...).
+     * SK: Rýchle spočítanie pre mikro-bench (predvolene cez zoznam).
+     * Hlavný S1-benchmark teraz používa priamo rangeList(...).
      */
     default long rangeCount(int lo, int hiExclusive) {
         return rangeList(lo, hiExclusive).size();

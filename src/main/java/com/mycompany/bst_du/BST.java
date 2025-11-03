@@ -10,11 +10,11 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 /**
- * Generic, non-recursive BST with height bookkeeping (for AVL subclass).
+ * Všeobecný, nerekurzívny BST s evidenciou výšky (využíva podtrieda AVL).
  */
 public class BST<N extends EntityNode<N>> {
 
-    /** SK: sprístupnené pre AVL; obsahuje aj výšku kvôli neskoršiemu rebalance. */
+    /** SK: sprístupnené pre AVL; uzol nesie aj výšku kvôli neskoršiemu rebalance. */
     protected static class TreeNode<N extends EntityNode<N>> {
         N key;
         TreeNode<N> left, right;
@@ -48,13 +48,13 @@ public class BST<N extends EntityNode<N>> {
                 if (cur.right == null) { cur.right = new TreeNode<>(key); size++; parents.push(cur.right); break; }
                 cur = cur.right;
             } else {
-                // already present -> no insert
+                // SK: kľúč už existuje → nevkladáme duplicitný prvok
                 return false;
             }
         }
 
-        // SK: po vložení iba aktualizujeme výšky smerom hore (bez rotácií v čistom BST)
-        parents.pop(); // inserted node
+        // SK: po vložení len aktualizujeme výšky smerom hore (v čistom BST bez rotácií)
+        parents.pop(); // vložený uzol
         while (!parents.isEmpty()) {
             TreeNode<N> p = parents.pop();
             updateHeight(p);
@@ -63,7 +63,7 @@ public class BST<N extends EntityNode<N>> {
     }
 
     /* --------------------------- ITERATIVE FIND/CONTAINS --------------------------- */
-    /** Возвращает сам найденный элемент (или null), а не boolean. */
+    /** SK: Vráti nájdený prvok (alebo null), nie iba boolean. */
     public N find(N key) {
         if (key == null) throw new IllegalArgumentException("Null keys not allowed");
         TreeNode<N> cur = root;
@@ -75,7 +75,7 @@ public class BST<N extends EntityNode<N>> {
         return null;
     }
 
-    /** Оставляем contains для удобства, но основной API — find/range. */
+    /** SK: `contains` ponechávame pre pohodlie; primárne API je `find`/`range`. */
     public boolean contains(N key) { return find(key) != null; }
 
     /* --------------------------- ITERATIVE DELETE --------------------------- */
@@ -86,16 +86,16 @@ public class BST<N extends EntityNode<N>> {
         TreeNode<N> cur = root;
         TreeNode<N> parent = null;
 
-        // find node
+        // SK: hľadanie uzla na odstránenie
         while (cur != null && key.compareTo(cur.key) != 0) {
             parents.push(cur);
             parent = cur;
             int cmp = key.compareTo(cur.key);
             cur = (cmp < 0) ? cur.left : cur.right;
         }
-        if (cur == null) return false; // not found
+        if (cur == null) return false; // SK: nenašlo sa
 
-        // case: two children -> swap with inorder successor
+        // SK: prípad dvoch detí → zámenný trik s inorder nástupcom
         if (cur.left != null && cur.right != null) {
             parents.push(cur);
             TreeNode<N> succParent = cur;
@@ -105,17 +105,17 @@ public class BST<N extends EntityNode<N>> {
                 succParent = succ;
                 succ = succ.left;
             }
-            // SK: výmenný trik — meníme len hodnotu, štruktúru zatiaľ nie
+            // SK: meníme len hodnotu uzla, štruktúru zatiaľ nie
             cur.key = succ.key;
             parent = succParent;
-            cur = succ; // fyzicky odstránime nástupcu (má nanajvýš 1 dieťa)
+            cur = succ; // SK: fyzicky odstránime nástupcu (má nanajvýš 1 dieťa)
         }
 
-        // now cur has at most one child
+        // SK: v tomto bode má `cur` nanajvýš jedno dieťa
         TreeNode<N> repl = (cur.left != null) ? cur.left : cur.right;
 
         if (parents.isEmpty()) {
-            // deleting root
+            // SK: mazanie koreňa
             root = repl;
             size--;
             if (root != null) updateHeight(root);
@@ -127,7 +127,7 @@ public class BST<N extends EntityNode<N>> {
             size--;
         }
 
-        // SK: iteratívne aktualizácie výšok na ceste hore
+        // SK: iteratívne doaktualizovanie výšok po ceste nahor
         while (!parents.isEmpty()) {
             TreeNode<N> p = parents.pop();
             updateHeight(p);
@@ -150,8 +150,8 @@ public class BST<N extends EntityNode<N>> {
         return node;
     }
 
-    /* --------------------------- HEIGHT (O(1) по корню) --------------------------- */
-    public int height() { return (root == null) ? -1 : root.height - 1; } // SK: prázdne = -1; list = 0
+    /* --------------------------- HEIGHT (O(1) na koreni) --------------------------- */
+    public int height() { return (root == null) ? -1 : root.height - 1; } // SK: prázdny = -1; list = 0
 
     /* --------------------------- ITERATIVE TRAVERSALS --------------------------- */
     public java.util.List<N> inOrder() {
@@ -198,22 +198,22 @@ public class BST<N extends EntityNode<N>> {
 
     /* --------------------------- RANGE SEARCH (ITERATIVE) --------------------------- */
 
-    /** Закрытый диапазон [lo, hi], in-order, без рекурсии. */
+    /** SK: Uzavretý interval [lo, hi], in-order, bez rekurzie. */
     public List<N> range(N lo, N hi) {
         return range(lo, true, hi, true);
     }
 
-    /** Полуинтервал [lo, hiExclusive), удобно для бенчей. */
+    /** SK: Polouzavretý interval [lo, hiExclusive); vhodné pre benchmarky. */
     public List<N> rangeHalfOpen(N lo, N hiExclusive) {
         return range(lo, true, hiExclusive, false);
     }
 
     /**
-     * Итеративный диапазонный поиск в стиле лекций:
-     *  1) lower_bound(lo): идём от корня, запоминая путь к первому узлу с key >= lo;
-     *  2) затем in-order итерация до hi (включительно/исключительно по флагам).
+     * SK: Iteratívne vyhľadávanie v intervale v štýle prednášok:
+     *  1) lower_bound(lo): od koreňa si vybudujeme cestu k prvému uzlu s key >= lo;
+     *  2) potom in-order iterujeme po hi (vrátane/vynechané podľa príznakov).
      *
-     * Сложность: O(h + k), где h — высота, k — число найденных элементов.
+     * Zložitosť: O(h + k), kde h je výška a k je počet vrátených prvkov.
      */
     public List<N> range(N lo, boolean loInc, N hi, boolean hiInc) {
         if (lo == null || hi == null) throw new IllegalArgumentException("Null bounds not allowed");
@@ -223,27 +223,27 @@ public class BST<N extends EntityNode<N>> {
         Deque<TreeNode<N>> st = new ArrayDeque<>();
         TreeNode<N> cur = root;
 
-        // === 1) lower_bound(lo): построить стек пути к первому узлу с key >= lo ===
+        // === 1) lower_bound(lo): zásobník cesty k prvému uzlu s key >= lo ===
         while (cur != null) {
             int cmp = cur.key.compareTo(lo);
             if (cmp >= 0) { st.push(cur); cur = cur.left; }
             else          { cur = cur.right; }
         }
 
-        // === 2) in-order от lower_bound до hi ===
+        // === 2) in-order od lower_bound po hi ===
         while (!st.isEmpty()) {
             TreeNode<N> n = st.pop();
 
-            // верхняя граница
+            // SK: horná hranica
             int cHi = n.key.compareTo(hi);
             if (cHi > 0 || (cHi == 0 && !hiInc)) break;
 
-            // нижняя граница
+            // SK: dolná hranica
             int cLo = n.key.compareTo(lo);
             boolean okLo = (cLo > 0) || (cLo == 0 && loInc);
             if (okLo) out.add(n.key);
 
-            // шаг к inorder-наследнику: левый экстремум правого поддерева
+            // SK: krok k inorder-nástupcovi: ľavý extrém pravého podstromu
             TreeNode<N> r = n.right;
             while (r != null) { st.push(r); r = r.left; }
         }
@@ -260,7 +260,7 @@ public class BST<N extends EntityNode<N>> {
        ==================== CSV SUPPORT (NO LIBRARIES) ========================
        ======================================================================== */
 
-    /** Экранирует поле (разделитель — ';'). */
+    /** SK: Escapuje pole (oddeľovač je ';'). */
     public static String csvEsc(String s){
         if (s == null) return "";
         boolean needQ = s.indexOf(';')>=0 || s.indexOf('"')>=0 || s.indexOf('\n')>=0 || s.indexOf('\r')>=0;
@@ -268,7 +268,7 @@ public class BST<N extends EntityNode<N>> {
         return needQ ? "\"" + r + "\"" : r;
     }
 
-    /** Снимает экранирование поля. */
+    /** SK: Odstraňuje escapovanie poľa. */
     public static String csvUnesc(String s){
         if (s == null || s.isEmpty()) return "";
         s = s.trim();
@@ -279,7 +279,7 @@ public class BST<N extends EntityNode<N>> {
         return s;
     }
 
-    /** Разбивает CSV-строку по ';', поддерживая кавычки и удвоенные кавычки. */
+    /** SK: Rozdelenie CSV riadku podľa ';' s podporou úvodzoviek a zdvojených úvodzoviek. */
     public static String[] csvSplit(String line){
         ArrayList<String> out = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
@@ -302,9 +302,9 @@ public class BST<N extends EntityNode<N>> {
     }
 
     /**
-     * Запись дерева в CSV-файл в порядке in-order.
-     * @param file     путь к файлу
-     * @param encoder  функция (узел) -> строка без перевода строки
+     * SK: Zápis stromu do CSV v poradí in-order.
+     * @param file     cesta k súboru
+     * @param encoder  funkcia (uzol) -> riadok bez konca riadku
      */
     public void exportCsv(Path file, Function<N, String> encoder) throws IOException {
         if (file == null) throw new IllegalArgumentException("file required");
@@ -328,13 +328,13 @@ public class BST<N extends EntityNode<N>> {
     }
 
     /**
-     * Чтение CSV в дерево.
-     * @param file         путь к файлу
-     * @param lineDecoder  функция (строка CSV) -> готовый узел N (или null для пропуска строки)
-     * @param sorted       true: строки уже отсортированы по ключу — используем O(n) сборку;
-     *                     false: вставляем по одной (O(n log n)).
-     * @param skipHeader   true: пропустить первую строку
-     * @return количество успешно импортированных записей
+     * SK: Čítanie CSV do stromu.
+     * @param file         cesta k súboru
+     * @param lineDecoder  funkcia (CSV riadok) -> hotový uzol N (alebo null ak sa riadok preskočí)
+     * @param sorted       true: riadky sú vopred zotriedené podľa kľúča — použije sa O(n) zostavenie;
+     *                     false: vkladanie po jednom (O(n log n)).
+     * @param skipHeader   true: preskočiť prvý riadok (hlavičku)
+     * @return počet úspešne importovaných záznamov
      */
     public int importCsv(Path file, Function<String, N> lineDecoder, boolean sorted, boolean skipHeader) throws IOException {
         if (file == null || !Files.exists(file)) return 0;
@@ -351,7 +351,7 @@ public class BST<N extends EntityNode<N>> {
                         N node = lineDecoder.apply(line);
                         if (node != null && this.insert(node)) ok++;
                     } catch (Exception ex) {
-                        // пропускаем битую строку
+                        // SK: poškodený riadok preskočíme
                     }
                 }
             }
@@ -368,7 +368,7 @@ public class BST<N extends EntityNode<N>> {
                         N node = lineDecoder.apply(line);
                         if (node != null) entries.add(node);
                     } catch (Exception ex) {
-                        // пропуск
+                        // SK: preskočiť chybný vstup
                     }
                 }
             }
@@ -378,11 +378,11 @@ public class BST<N extends EntityNode<N>> {
         }
     }
 
-    /** Итеративная сборка идеально сбалансированного BST из отсортированного списка ключей (по compareTo). */
+    /** SK: Iteratívna stavba dokonale vyváženého BST zo zotriedeného zoznamu kľúčov (podľa compareTo). */
     protected void buildBalancedFromSorted(List<N> sorted) {
         if (sorted == null || sorted.isEmpty()) { clear(); return; }
 
-        // дерево собираем из готовых TreeNode без insert — O(n)
+        // SK: skladáme strom priamo z hotových TreeNode bez `insert` — O(n)
         this.root = null;
         this.size = sorted.size();
 
@@ -414,11 +414,11 @@ public class BST<N extends EntityNode<N>> {
             if (m+1 <= t.hi) st.push(new Task(m+1, t.hi, node, false));
         }
 
-        // пересчёт высот post-order (итеративно)
+        // SK: následný prepočet výšok v post-order (iteratívne)
         recomputeHeightsIterative();
     }
 
-    /** Итеративный post-order для пересчёта height у всех узлов. */
+    /** SK: Iteratívny post-order na prepočet `height` pre všetky uzly. */
     protected void recomputeHeightsIterative() {
         if (root == null) return;
         Deque<TreeNode<N>> s1 = new ArrayDeque<>();

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
-/** Адаптер Int→IntNode для AVL: делегирует внутрь структуры, поддерживает список и быстрый Count. */
+/** Adaptér Int→IntNode pre AVL: deleguje do vnútornej štruktúry, podporuje zoznam a rýchly Count. */
 public final class AvlIntAdapter implements IntSetStructure {
 
     private final AVL<IntNode> avl = new AVL<>();
@@ -29,7 +29,7 @@ public final class AvlIntAdapter implements IntSetStructure {
         return (m == null) ? Integer.MAX_VALUE : m.getValue();
     }
 
-    /** Список как полуинтервал [lo, hi). Делегируем в BST/AVL range с флагами. */
+    /** Zoznam ako polouzavretý interval [lo, hi). Deleguje na BST/AVL range s príznakmi. */
     @Override
     public List<Integer> rangeList(int lo, int hiExclusive) {
         if (lo >= hiExclusive) return List.of();
@@ -39,25 +39,26 @@ public final class AvlIntAdapter implements IntSetStructure {
         return out;
     }
 
-    /** Быстрый счёт без аллокации списка — остаётся для вспомогательных замеров. */
+    /** Rýchle počítanie bez alokovania zoznamu — ponechané pre pomocné merania. */
     @Override
     public long rangeCount(int lo, int hiExclusive) {
         long count = 0L;
         Deque<BST.TreeNode<IntNode>> st = new ArrayDeque<>();
         BST.TreeNode<IntNode> cur = avl.root;
 
-        // lower_bound(lo)
+        // SK: lower_bound(lo) — vybudujeme cestu k prvému uzlu s hodnotou >= lo
         while (cur != null) {
             int v = cur.key.getValue();
             if (v >= lo) { st.push(cur); cur = cur.left; }
             else         { cur = cur.right; }
         }
-        // inorder до hiExclusive
+        // SK: in-order iterácia po hiExclusive (horná hranica je vylúčená)
         while (!st.isEmpty()) {
             BST.TreeNode<IntNode> n = st.pop();
             int v = n.key.getValue();
-            if (v >= hiExclusive) break;
+            if (v >= hiExclusive) break;      // SK: dosiahli sme hornú hranicu intervalu
             count++;
+            // SK: krok na inorder-nástupcu: ľavý extrém pravého podstromu
             BST.TreeNode<IntNode> r = n.right;
             while (r != null) { st.push(r); r = r.left; }
         }

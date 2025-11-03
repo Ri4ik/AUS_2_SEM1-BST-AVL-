@@ -6,20 +6,20 @@ package com.mycompany.bst_du;
 import java.util.*;
 
 /**
- * Demo / tests.
+ * Demo / testy.
  */
 /**
- * Main: запускает полный набор структурных тестов для AVL.
+ * Hlavná trieda: spúšťa kompletnú sadu štruktúrnych testov pre AVL.
  */
 public class BST_du {
     public static void main(String[] args) {
-        // 1) Полные структурные тесты AVL
+        // 1) Kompletné štruktúrne testy AVL
         Tester.runAll();
 
-        // 2) Универсальное сравнение двух структур
+        // 2) Univerzálne porovnanie dvoch štruktúr (benchmark)
         BenchConfig cfg = BenchConfig.s1Default();
         IntSetStructure avl = new AvlIntAdapter();
-        IntSetStructure ref = new TreeSetAdapter(); // позже можно подставить HestAdapter
+        IntSetStructure ref = new TreeSetAdapter(); // SK: neskôr možno nahradiť HestAdapter-om
 
         DualBenchmark.run(cfg, "AVL<IntNode>", avl, "TreeSet<Integer>", ref);
     }

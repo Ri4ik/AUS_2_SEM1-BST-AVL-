@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
+/** SK: Adaptér nad JDK TreeSet — referenčná usporiadaná štruktúra pre benchmark/comparison. */
 public final class TreeSetAdapter implements IntSetStructure {
     private final TreeSet<Integer> ts = new TreeSet<>();
 
@@ -29,7 +30,7 @@ public final class TreeSetAdapter implements IntSetStructure {
     public List<Integer> rangeList(int lo, int hiExclusive) {
         if (lo >= hiExclusive) return List.of();
         NavigableSet<Integer> sub = ts.subSet(lo, true, hiExclusive, false);
-        return new ArrayList<>(sub); // уже отсортированно
+        return new ArrayList<>(sub); // SK: už zoradený pohľad podľa prirodzeného poradia
     }
 
     @Override

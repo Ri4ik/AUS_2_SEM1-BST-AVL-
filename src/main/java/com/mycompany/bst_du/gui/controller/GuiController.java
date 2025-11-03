@@ -12,12 +12,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * SK: Controller vrstva GUI – sprostredkuje volania na model a robí
+ * prísne/paranoidne parsovanie vstupov (bez zmeny biznis logiky).
+ */
 public final class GuiController {
     private final GuiModel model;
 
     public GuiController(GuiModel model) { this.model = model; }
 
-    // ========================= Utilities: strict parsing & guards =========================
+    // ========================= Utilities: prísne parsovanie & guardy =========================
     private static void requireNonEmpty(String s, String field) {
         if (s == null || s.trim().isEmpty()) throw new IllegalArgumentException(field + " is required");
     }
@@ -41,6 +45,7 @@ public final class GuiController {
         requireNonEmpty(s, field);
         return Instant.parse(s.trim());
     }
+    /** SK: „1“ alebo „true“ → true; inak false. */
     private static boolean parseBool10(String s) {
         if (s == null) return false;
         String v = s.trim();
@@ -48,6 +53,7 @@ public final class GuiController {
     }
 
     // ========================= Patients =========================
+    /** SK: Vloženie pacienta; správy ostávajú v EN kvôli konzistencii GUI. */
     public String insertPatient(String id, String fn, String ln, String birthIso) {
         try {
             requireNonEmpty(id, "Patient ID");
@@ -60,6 +66,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Zmazanie pacienta aj s jeho testami. */
     public String deletePatient(String id) {
         try {
             requireNonEmpty(id, "Patient ID");
@@ -70,11 +77,13 @@ public final class GuiController {
         }
     }
 
+    /** SK: Rýchly prehľad počtov. */
     public String counts() {
         return "Patients=" + model.countPatients() + ", Tests=" + model.countTests();
     }
 
     // ========================= Tests =========================
+    /** SK: Vloženie testu; podporuje auto-generovanie kódu, inak striktné parsovanie. */
     public String insertTest(String codeStr, String pid, String instantIso, String wsStr,
                             String distStr, String regStr, String posStr, String valStr, String note) {
        try {
@@ -99,11 +108,12 @@ public final class GuiController {
            return "Error insertTest: " + e.getMessage();
        }
     }
-    // Auto-code insert passthrough
+    /** SK: Priamy prienos na auto-kód insert (bez zachytenia výnimiek). */
     public PcrTest insertTestAuto(String pid, Instant ts, long ws, int dist, int reg, boolean pos, double val, String note) {
         return model.insertTestAuto(pid, ts, ws, dist, reg, pos, val, note);
     }
 
+    /** SK: Vyhľadanie testu podľa kódu – textový výstup. */
     public String findTestByCode(String codeStr) {
         try {
             long code = parseLongStrict(codeStr, "Code");
@@ -114,7 +124,7 @@ public final class GuiController {
         }
     }
 
-    /** Для таблицы Tests: вернуть 0/1 строку по коду. */
+    /** SK: Pre tabuľku Tests – vráti 0/1 riadok podľa kódu. */
     public List<PcrTest> findTestByCodeAsList(String codeStr) {
         try {
             long code = parseLongStrict(codeStr, "Code");
@@ -130,6 +140,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Zmazanie testu podľa kódu – textový výstup. */
     public String deleteTestByCode(String codeStr) {
         try {
             long code = parseLongStrict(codeStr, "Code");
@@ -141,6 +152,7 @@ public final class GuiController {
     }
 
     // ========================= Queries (string/pretty) =========================
+    /** SK: Testy pacienta v chronologickom poradí – formátovaný string. */
     public String testsOfPatientChrono(String pid) {
         try {
             requireNonEmpty(pid, "Patient ID");
@@ -151,6 +163,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Testy podľa okresu v období; voliteľne len pozitívne – formátovaný string. */
     public String districtInPeriod(String districtStr, String fromIso, String toIso, boolean onlyPos) {
         try {
             int d = parseIntStrict(districtStr, "District");
@@ -164,6 +177,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Testy podľa regiónu v období; voliteľne len pozitívne – formátovaný string. */
     public String regionInPeriod(String regionStr, String fromIso, String toIso, boolean onlyPos) {
         try {
             int r = parseIntStrict(regionStr, "Region");
@@ -177,6 +191,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Globálne testy v období; voliteľne len pozitívne – formátovaný string. */
     public String globalInPeriod(String fromIso, String toIso, boolean onlyPos) {
         try {
             LocalDate from = parseDateStrict(fromIso, "From (YYYY-MM-DD)");
@@ -189,6 +204,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Testy podľa pracoviska (workstation) v období – formátovaný string. */
     public String workstationInPeriod(String wsStr, String fromIso, String toIso) {
         try {
             long ws = parseLongStrict(wsStr, "Workstation ID");
@@ -201,7 +217,8 @@ public final class GuiController {
         }
     }
 
-    // ========================= op2 Find test of patient =========================
+    // ========================= op2: nájdi test pacienta =========================
+    /** SK: op2 – textový výstup s detailom pacienta. */
     public String findTestOfPatient(String codeStr, String pid) {
         try {
             long code = parseLongStrict(codeStr, "Code");
@@ -215,7 +232,7 @@ public final class GuiController {
             return "Error findTestOfPatient: " + e.getMessage();
         }
     }
-    /** Для таблицы Tests: 0/1 строка по оп2. */
+    /** SK: Pre tabuľku Tests – 0/1 riadok pre op2. */
     public List<PcrTest> findTestOfPatientAsList(String codeStr, String pid) {
         try {
             long code = parseLongStrict(codeStr, "Code");
@@ -229,6 +246,7 @@ public final class GuiController {
     }
 
     // ========================= CSV & Service =========================
+    /** SK: Export CSV do daného adresára. */
     public String exportCsv(String dirPath) {
         try {
             requireNonEmpty(dirPath, "Directory");
@@ -239,6 +257,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Import CSV z daného adresára. */
     public String importCsv(String dirPath) {
         try {
             requireNonEmpty(dirPath, "Directory");
@@ -249,6 +268,7 @@ public final class GuiController {
         }
     }
 
+    /** SK: Vyčistenie všetkých dát. */
     public String clearAll() {
         try {
             model.clearAll();
@@ -259,12 +279,14 @@ public final class GuiController {
     }
 
     // ========================= Formatting helpers =========================
+    /** SK: Formátovanie zoznamu testov do textu (jedna položka na riadok). */
     private String fmtTests(List<PcrTest> arr) {
         StringBuilder sb = new StringBuilder();
         sb.append("Count=").append(arr.size()).append('\n');
         for (PcrTest t : arr) sb.append(fmtTest(t)).append('\n');
         return sb.toString();
     }
+    /** SK: Formátovanie jedného testu s prípadným rozšírením o pacienta. */
     private String fmtTest(PcrTest t) {
         Patient p = model.findPatientById(t.patientId);
         String pStr = (p == null)
@@ -276,7 +298,7 @@ public final class GuiController {
                 + ", pos=" + t.positive + ", val=" + t.value + ", note=" + t.note;
     }
 
-    // ===== Sickness (ops 10–16) — имена ровно как ждёт MainFrame =====
+    // ===== Sickness (ops 10–16) — SK: názvy presne podľa očakávania MainFrame =====
     public List<Patient> sickByDistrictAtDate(int district, LocalDate atDate, int daysWindow) {
         return model.sickByDistrictAtDate(district, atDate, daysWindow);
     }
@@ -299,7 +321,7 @@ public final class GuiController {
         return model.regionsBySickCount(atDate, daysWindow);
     }
 
-    // ===== Queries for tables =====
+    // ===== Queries for tables (SK: priame preposlanie na model) =====
     public List<PcrTest> modelAllTestsOfPatientChrono(String patientId) {
         return model.allTestsOfPatientChrono(patientId);
     }
@@ -325,7 +347,7 @@ public final class GuiController {
         return model.allByWorkstationInPeriod(workstationId, from, toExclusive);
     }
     
-    // --- Demo Data ---
+    // --- Demo Data (SK: jednoduchý generátor dát pre GUI ukážky) ---
     public String generatePatients(int count) {
         try {
             java.util.Random rnd = new java.util.Random();
@@ -346,7 +368,7 @@ public final class GuiController {
     public String generateTests(int count) {
         try {
             java.util.Random rnd = new java.util.Random();
-            java.util.List<String> pids = model.getAllPatientIds(); // добавим ниже в GuiModel
+            java.util.List<String> pids = model.getAllPatientIds(); // SK: dostupné v GuiModel
             if (pids.isEmpty()) return "No patients available for tests.";
 
             for (int i = 1; i <= count; i++) {
@@ -366,7 +388,4 @@ public final class GuiController {
             return "Error generateTests: " + e.getMessage();
         }
     }
-    
-    
-    
 }

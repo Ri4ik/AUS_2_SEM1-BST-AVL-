@@ -16,15 +16,16 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.prefs.Preferences;
 
+/** SK: Hlavné okno aplikácie – skladá panely, taby a log. */
 public final class MainFrame extends JFrame {
     private final GuiController ctl;
 
     private final JTextArea log = new JTextArea(12, 80);
 
-    // Результаты в табах
+    // SK: Výstupné tabuľky v taboch
     private final JTabbedPane resultTabs = new JTabbedPane();
     private final JTable testsTable = new JTable(new TestTableModel());
-    private final JTable peopleTable = new JTable(new PatientTableModel()); // переключаемые модели
+    private final JTable peopleTable = new JTable(new PatientTableModel()); // SK: model sa prepína
 
     public MainFrame(GuiController ctl) {
         super("PCR Demo System — MVC GUI");
@@ -32,16 +33,16 @@ public final class MainFrame extends JFrame {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Вкладки ввода
+        // SK: Vstupné záložky
         JTabbedPane tabs = new JTabbedPane();
         tabs.add("Demo Data", buildDemoPanel());
         tabs.add("Patients", buildPatientsPanel());
         tabs.add("Tests", buildTestsPanel());
         tabs.add("Queries", buildQueriesPanel());
-        tabs.add("Sickness (ops 10–16)", buildSicknessPanel()); 
+        tabs.add("Sickness (ops 10–16)", buildSicknessPanel());
         tabs.add("CSV / Service", buildCsvPanel());
 
-        // Результаты
+        // SK: Výsledky
         resultTabs.add("Tests", new JScrollPane(testsTable));
         resultTabs.add("People/Counts", new JScrollPane(peopleTable));
 
@@ -108,7 +109,7 @@ public final class MainFrame extends JFrame {
         JTextField tVal  = new JTextField(6);
         JTextField tNote = new JTextField(20);
         JCheckBox cbAuto = new JCheckBox("Auto code", true);
-        
+
         JButton bIns = new JButton("1) Insert Test");
         bIns.addActionListener(e -> {
             String codeStr = cbAuto.isSelected() ? "auto" : tCode.getText().trim();
@@ -119,6 +120,7 @@ public final class MainFrame extends JFrame {
             appendLog(msg);
             appendCounts();
         });
+//        SK: Alternatívny handler bez auto-kódu:
 //        JButton bIns = new JButton("1) Insert Test");
 //        bIns.addActionListener(e -> {
 //            String msg = ctl.insertTest(tCode.getText().trim(), tPid.getText().trim(),
@@ -139,6 +141,7 @@ public final class MainFrame extends JFrame {
 
         JTextField dCode = new JTextField(8);
         JButton bDel = new JButton("20) Delete Test by Code");
+//        SK: Jednoduché zmazanie bez potvrdenia:
 //        bDel.addActionListener(e -> {
 //            String msg = ctl.deleteTestByCode(dCode.getText().trim());
 //            appendLog(msg);
@@ -179,7 +182,7 @@ public final class MainFrame extends JFrame {
         JPanel p = new JPanel(new GridBagLayout());
         GridBagConstraints c = gbc();
 
-        // --- op3: tests of patient chrono ---
+        // SK: op3 – testy pacienta (chrono)
         JTextField pid = new JTextField(8);
         JButton bPid = new JButton("3) Tests of Patient (chrono) → Tests table");
         bPid.addActionListener(e -> {
@@ -187,11 +190,11 @@ public final class MainFrame extends JFrame {
             showTests(list);
         });
 
-        // --- common dates ---
+        // SK: spoločné dátumy
         JTextField qFrom = new JTextField(10);
         JTextField qToEx = new JTextField(10);
 
-        // --- district ---
+        // SK: okres
         JTextField dist = new JTextField(6);
         JButton bDistAll = new JButton("5) District ALL → Tests table");
         bDistAll.addActionListener(e -> showTests(
@@ -202,7 +205,7 @@ public final class MainFrame extends JFrame {
                 com.mycompany.bst_du.gui.UtilQueries.district(ctl, dist.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
-        // --- region ---
+        // SK: región
         JTextField reg = new JTextField(6);
         JButton bRegAll = new JButton("7) Region ALL → Tests table");
         bRegAll.addActionListener(e -> showTests(
@@ -213,7 +216,7 @@ public final class MainFrame extends JFrame {
                 com.mycompany.bst_du.gui.UtilQueries.region(ctl, reg.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
-        // --- global ---
+        // SK: globálne
         JButton bGAll = new JButton("9) Global ALL → Tests table");
         bGAll.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.global(ctl, qFrom.getText().trim(), qToEx.getText().trim(), false)
@@ -223,14 +226,14 @@ public final class MainFrame extends JFrame {
                 com.mycompany.bst_du.gui.UtilQueries.global(ctl, qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
-        // --- workstation ---
+        // SK: pracovisko
         JTextField ws = new JTextField(8);
         JButton bWs = new JButton("17)Workstation ALL → Tests table");
         bWs.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.workstation(ctl, ws.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim())
         ));
 
-        // --- op2: Find test of patient (code+pid) ---
+        // SK: op2 – find test pacienta (code+pid)
         JTextField f2Code = new JTextField(8);
         JTextField f2Pid  = new JTextField(8);
         JButton bFindOp2 = new JButton("2)Find test of patient  → Tests table");
@@ -356,6 +359,7 @@ public final class MainFrame extends JFrame {
         });
 
         JButton bClear = new JButton("Clear ALL");
+//        SK: Jednoduché čistenie bez potvrdenia:
 //        bClear.addActionListener(e -> {
 //            appendLog(ctl.clearAll());
 //            ((TestTableModel) testsTable.getModel()).setData(java.util.List.of());
@@ -376,7 +380,7 @@ public final class MainFrame extends JFrame {
                 peopleTable.setModel(m);
                 appendCounts();
             }
-        }); 
+        });
 
         int r=0;
         addRow(p,c,r++, "Directory:", dir);
@@ -387,7 +391,7 @@ public final class MainFrame extends JFrame {
         return p;
     }
 
-    // ====== Bottom (results + log + counts) ======
+    // ====== Spodná časť (výsledky + log + počty) ======
     private JPanel buildBottomPanel() {
         JPanel p = new JPanel(new BorderLayout());
         log.setEditable(false);
@@ -461,20 +465,20 @@ public final class MainFrame extends JFrame {
     }
     private static void addBtnInline(JPanel p, GridBagConstraints c, int r, java.awt.Component b) {
         GridBagConstraints f = (GridBagConstraints)c.clone();
-        f.gridx = 2; 
-        f.gridy = r; 
-        f.gridwidth = 1; 
-        f.fill = GridBagConstraints.NONE; 
+        f.gridx = 2;
+        f.gridy = r;
+        f.gridwidth = 1;
+        f.fill = GridBagConstraints.NONE;
         f.weightx = 0;
         p.add(b, f);
     }
     private static void addBtnRow(JPanel p, GridBagConstraints c, int r, JButton... buttons) {
-    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-    for (JButton b : buttons) row.add(b);
-    GridBagConstraints f = (GridBagConstraints)c.clone();
-    f.gridx = 0; f.gridy = r; f.gridwidth = 2; f.fill = GridBagConstraints.NONE; f.weightx = 0;
-    p.add(row, f);
-}
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        for (JButton b : buttons) row.add(b);
+        GridBagConstraints f = (GridBagConstraints)c.clone();
+        f.gridx = 0; f.gridy = r; f.gridwidth = 2; f.fill = GridBagConstraints.NONE; f.weightx = 0;
+        p.add(row, f);
+    }
 
     private void appendLog(String line) {
         log.append(line);
@@ -485,7 +489,7 @@ public final class MainFrame extends JFrame {
         appendLog("COUNTS: " + ctl.counts());
     }
 
-    // ====== Persist window bounds ======
+    // ====== Perzistencia rozmerov okna ======
     private void restoreWindowBounds(){
         Preferences p = Preferences.userNodeForPackage(MainFrame.class);
         int x = p.getInt("win.x", -1);
@@ -505,6 +509,7 @@ public final class MainFrame extends JFrame {
             }
         });
     }
+
     // ====== Demo Data ======
     private JPanel buildDemoPanel() {
         JPanel p = new JPanel(new GridBagLayout());
@@ -535,6 +540,7 @@ public final class MainFrame extends JFrame {
             }
         });
 
+//        SK: Alternatívne tlačidlo na rýchle vyčistenie:
 //        JButton bClear = new JButton("Clear All Data");
 //        bClear.addActionListener(e -> {
 //            try {

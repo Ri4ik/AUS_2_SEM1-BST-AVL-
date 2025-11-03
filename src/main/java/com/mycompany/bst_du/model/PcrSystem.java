@@ -1,5 +1,5 @@
 /*
- * PCR system — indexes on custom AVL/BST, CSV I/O without libraries.
+ * SK: PCR systém — indexy na vlastných AVL/BST, CSV I/O bez knižníc.
  */
 package com.mycompany.bst_du.model;
 
@@ -41,11 +41,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Центральная доменная логика: хранит все индексы (AVL) и реализует 21 операцию.
+ * SK: Centrálna doménová logika: drží všetky indexy (AVL) a implementuje 21 operácií.
  */
 public final class PcrSystem {
 
-    // === Индексы (наши AVL) ===
+    // === SK: Indexy (AVL) ===
     private final AVL<PatientByIdNode>           idxPatients          = new AVL<>();
     private final AVL<TestByCodeNode>            idxByCode            = new AVL<>();
     private final AVL<TestByPatientTimeNode>     idxByPatientTime     = new AVL<>();
@@ -58,7 +58,7 @@ public final class PcrSystem {
     private static final DateTimeFormatter DATE    = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter INSTANT = DateTimeFormatter.ISO_INSTANT;
 
-    // === Служебные вычисления дат ===
+    // === SK: Pomocné prepočty dátumov (YYYYMMDD) ===
     private static int ymd(LocalDate d) {
         return d.getYear() * 10000 + d.getMonthValue() * 100 + d.getDayOfMonth();
     }
@@ -67,7 +67,7 @@ public final class PcrSystem {
         return ymd(ld);
     }
 
-    // === Статистика/сервис ===
+    // === SK: Štatistika / servis ===
     public int countPatients() { return idxPatients.size(); }
     public int countTests()    { return idxByCode.size(); }
 
@@ -81,7 +81,7 @@ public final class PcrSystem {
         idxByWorkstationDate.clear();
     }
 
-    // === Базовые CRUD, которые используют индексы ===
+    // === SK: Základné CRUD via indexy ===
     public boolean addPatient(Patient p) {
         if (p == null) return false;
         if (idxPatients.find(new PatientByIdNode(p.patientId, null)) != null) return false;
@@ -93,7 +93,7 @@ public final class PcrSystem {
         PatientByIdNode cur = idxPatients.find(new PatientByIdNode(patientId, null));
         if (cur == null) return false;
 
-        // удалить все тесты пациента из всех индексов
+        // SK: Zmaž všetky testy pacienta zo všetkých indexov
         TestByPatientTimeNode lo = new TestByPatientTimeNode(patientId, Long.MIN_VALUE, Long.MIN_VALUE, null);
         TestByPatientTimeNode hi = new TestByPatientTimeNode(patientId, Long.MAX_VALUE, Long.MAX_VALUE, null);
         List<TestByPatientTimeNode> nodes = idxByPatientTime.range(lo, true, hi, true);
@@ -115,7 +115,7 @@ public final class PcrSystem {
         ok &= idxByRegionDate.insert(new TestByRegionDateNode(t.region, y, t.testCode, t));
         ok &= idxByDate.insert(new TestByDateNode(y, t.testCode, t));
         ok &= idxByWorkstationDate.insert(new TestByWorkstationDateNode(t.workstationId, y, t.testCode, t));
-        if (!ok) { // простейший rollback
+        if (!ok) { // SK: jednoduchý rollback pri zlyhaní
             idxByCode.delete(new TestByCodeNode(t.testCode, null));
             idxByPatientTime.delete(new TestByPatientTimeNode(t.patientId, t.timestamp.toEpochMilli(), t.testCode, null));
             idxByDistrictDate.delete(new TestByDistrictDateNode(t.district, y, t.testCode, null));
@@ -146,7 +146,7 @@ public final class PcrSystem {
         return ok;
     }
 
-    // === 21 операций ===
+    // === SK: 21 operácií ===
 
     public boolean op1_insertTest(PcrTest t) { return addTest(t); }
 
@@ -281,7 +281,7 @@ public final class PcrSystem {
 
     public boolean op21_deletePatientWithTests(String patientId) { return removePatient(patientId); }
 
-    // === CSV (без библиотек), опирается на наши in-order/range ===
+    // === SK: CSV (bez knižníc), využíva naše in-order/range ===
 
     public void exportToCsv(Path dir) throws IOException {
         if (dir == null) throw new IllegalArgumentException("dir required");
@@ -367,7 +367,7 @@ public final class PcrSystem {
         }
     }
 
-    // === Helpers: диапазоны/фильтры/поиски ===
+    // === SK: Pomocné rozsahy/filtre/vyhľadávania ===
 
     private List<PcrTest> rangeDistrict(int district, LocalDate from, LocalDate toExclusive) {
         int y1 = ymd(from), y2 = ymd(toExclusive);
@@ -455,7 +455,7 @@ public final class PcrSystem {
             }
             if (maxVal > Double.NEGATIVE_INFINITY) {
                 Patient p = getPatient(pid);
-                if (p != null) out.add(new PatientScore(p, maxVal, district)); // district не теряется
+                if (p != null) out.add(new PatientScore(p, maxVal, district)); // SK: okres sa zachová
             }
         }
         return out;
@@ -466,7 +466,7 @@ public final class PcrSystem {
         return list;
     }
 
-    // === Public read helpers (для GUI) ===
+    // === SK: Verejné čítacie helpery (pre GUI) ===
     public List<String> getAllPatientIds() {
         List<PatientByIdNode> nodes = idxPatients.inOrder();
         ArrayList<String> out = new ArrayList<>(nodes.size());
@@ -479,9 +479,9 @@ public final class PcrSystem {
         return (n == null) ? null : n.ref;
     }
     
-    // === Random unique code generation (náhodný, unikátny) ===
-    private static final long CODE_MIN = 100_000_000L;     // 9-значные коды (можно менять диапазон)
-    private static final long CODE_MAX = 999_999_999L;     // включительно
+    // === SK: Generovanie náhodného unikátneho kódu testu ===
+    private static final long CODE_MIN = 100_000_000L;     // SK: 9-miestny rozsah (možno zmeniť)
+    private static final long CODE_MAX = 999_999_999L;     // SK: vrátane
 
     private long randomCode() {
         return java.util.concurrent.ThreadLocalRandom.current().nextLong(CODE_MIN, CODE_MAX + 1);
@@ -499,7 +499,7 @@ public final class PcrSystem {
         return code;
     }
 
-    /** Op1-random: создаёт тест с авто-сгенерированным уникальным кодом и сразу вставляет его. */
+    /** SK: Op1-random — vytvorí test s auto-generovaným unikátnym kódom a hneď ho vloží. */
     public PcrTest op1_insertTestRandom(String patientId, Instant timestamp,
                                         long workstationId, int district, int region,
                                         boolean positive, double value, String note) {

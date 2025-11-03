@@ -6,8 +6,8 @@ import java.util.Deque;
 import java.util.List;
 
 /**
- * Non-recursive AVL built on top of BST.
- * Iterative insert/delete with bottom-up rebalancing.
+ * Nerekurzívne AVL postavené na BST.
+ * Iteratívne vkladanie/mazanie s vyvažovaním zdola nahor.
  */
 public class AVL<N extends EntityNode<N>> extends BST<N> {
 
@@ -17,14 +17,14 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
 
     /* --------------------------- ROTATIONS ---------------------------
        SK: Rotácie vracajú nový koreň daného podstromu. Po rotácii MUSÍ nasledovať
-           updateHeight najprv na "nižšom" uzle, potom na novom koreni podstromu.
+           updateHeight: najprv na „nižšom“ uzle, potom na novom koreni podstromu.
     ------------------------------------------------------------------ */
     protected TreeNode<N> rotateRight(TreeNode<N> x) {
         if (x == null || x.left == null) return x;
         TreeNode<N> y = x.left;
         TreeNode<N> beta = y.right;
 
-        // SK: y ide hore, x padá doprava, beta sa stáva ľavým synom x
+        // SK: y ide hore, x sa posúva doprava, beta sa stáva ľavým synom x
         y.right = x;
         x.left = beta;
 
@@ -38,7 +38,7 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
         TreeNode<N> y = x.right;
         TreeNode<N> beta = y.left;
 
-        // SK: y ide hore, x padá doľava, beta sa stáva pravým synom x
+        // SK: y ide hore, x sa posúva doľava, beta sa stáva pravým synom x
         y.left = x;
         x.right = beta;
 
@@ -77,32 +77,32 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
                 if (cur.right == null) { cur.right = new TreeNode<>(key); size++; parents.push(cur.right); break; }
                 cur = cur.right;
             } else {
-                return false; // dup
+                return false; // SK: duplicitný kľúč — nevkladáme
             }
         }
 
-        // поднятие: начинаем с родителя (узел, куда реально вставляли — на вершине стека сейчас)
+        // SK: „zdvih“: začíname od rodiča novo vloženého uzla (je navrchu zásobníka)
         parents.pop(); // inserted node
         while (!parents.isEmpty()) {
             TreeNode<N> p = parents.pop();
 
-            // SK: prepočítaj p, urob rotáciu ak treba
+            // SK: prepočet + prípadná rotácia
             updateHeight(p);
             int bal = balance(p);
             TreeNode<N> newSubRoot = p;
             if (bal > 1) {
-                if (balance(p.left) >= 0) newSubRoot = rotateRight(p);           // LL
-                else { p.left = rotateLeft(p.left); newSubRoot = rotateRight(p); } // LR
+                if (balance(p.left) >= 0) newSubRoot = rotateRight(p);              // LL
+                else { p.left = rotateLeft(p.left); newSubRoot = rotateRight(p); }  // LR
             } else if (bal < -1) {
-                if (balance(p.right) <= 0) newSubRoot = rotateLeft(p);           // RR
-                else { p.right = rotateRight(p.right); newSubRoot = rotateLeft(p); } // RL
+                if (balance(p.right) <= 0) newSubRoot = rotateLeft(p);              // RR
+                else { p.right = rotateRight(p.right); newSubRoot = rotateLeft(p); }// RL
             }
-            // SK: pripoj newSubRoot k dedovi (ak existuje)
+            // SK: pripojenie nového koreňa podstromu k „dedovi“ (ak existuje)
             if (!parents.isEmpty()) {
                 TreeNode<N> gp = parents.peek();
                 if (gp.left == p) gp.left = newSubRoot; else if (gp.right == p) gp.right = newSubRoot;
             } else {
-                root = newSubRoot; // SK: ak ded neexistuje → sme v koreni
+                root = newSubRoot; // SK: bez deda → aktualizujeme globálny koreň
             }
         }
         return true;
@@ -116,14 +116,14 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
         Deque<TreeNode<N>> parents = new ArrayDeque<>(64);
         TreeNode<N> cur = root;
 
-        // find node
+        // SK: hľadanie uzla
         while (cur != null && key.compareTo(cur.key) != 0) {
             parents.push(cur);
             cur = (key.compareTo(cur.key) < 0) ? cur.left : cur.right;
         }
         if (cur == null) return false;
 
-        // two children -> swap with inorder successor (swap KEYS only)
+        // SK: ak má 2 deti → výmena s inorder nástupcom (vymieňame len hodnoty)
         if (cur.left != null && cur.right != null) {
             parents.push(cur);
             TreeNode<N> succ = cur.right;
@@ -131,16 +131,16 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
                 parents.push(succ);
                 succ = succ.left;
             }
-            // SK: zámenný trik — vymeníme iba hodnoty, štruktúru nemeníme
+            // SK: zámenný trik — štruktúru nemeníme
             N tmp = cur.key; cur.key = succ.key; succ.key = tmp;
-            cur = succ; // fyzicky odstránime práve 'succ' (má nanajvýš 1 dieťa)
+            cur = succ; // SK: odstránime práve 'succ' (má nanajvýš 1 dieťa)
         }
 
-        // physically remove 'cur' (has ≤1 child)
+        // SK: fyzické odstránenie uzla s ≤ 1 dieťaťom
         TreeNode<N> repl = (cur.left != null) ? cur.left : cur.right;
 
         if (parents.isEmpty()) {
-            // removing root
+            // SK: odstraňuje sa koreň
             root = repl;
             size--;
             if (root != null) updateHeight(root);
@@ -151,14 +151,14 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
             size--;
         }
 
-        // SK: rebalance zdola nahor
+        // SK: vyvažovanie zdola nahor
         while (!parents.isEmpty()) {
             TreeNode<N> p = parents.pop();
 
             updateHeight(p);
             int bal = (h(p.left) - h(p.right));
 
-            TreeNode<N> newSubRoot = p;   // default: no rotation
+            TreeNode<N> newSubRoot = p;   // SK: default — bez rotácie
             if (bal > 1) {
                 if ((h(p.left.left) - h(p.left.right)) >= 0) {
                     newSubRoot = rotateRight(p);                  // LL
@@ -175,7 +175,7 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
                 }
             }
 
-            // connect to grandparent
+            // SK: pripojenie k „dedovi“ alebo aktualizácia koreňa
             if (!parents.isEmpty()) {
                 TreeNode<N> gp = parents.peek();
                 if (gp.left == p) gp.left = newSubRoot;
@@ -188,18 +188,18 @@ public class AVL<N extends EntityNode<N>> extends BST<N> {
     }
 
     /* --------------------------- RANGE SEARCH (EXPLICIT WRAPPERS) ---------------------------
-       Функционально не требуется (унаследовано из BST), но оставляем явные методы:
-       - видны прямо в API AVL;
-       - удобно для автодополнения/поиска по коду;
-       - сохраняем единообразный контракт с BST.
+       SK: Funkčne to nie je nutné (dedené z BST), no ponechávame explicitné metódy:
+           - budú priamo viditeľné v API AVL,
+           - uľahčia autocompletion/vyhľadávanie,
+           - držíme jednotný kontrakt s BST.
     ------------------------------------------------------------------ */
 
-    /** Диапазонный поиск: обе границы включительно. Возвращает in-order список элементов. */
+    /** SK: Intervalové vyhľadávanie: obe hranice vrátane. Vráti in-order zoznam prvkov. */
     public List<N> range(N lo, N hi) {
         return super.range(lo, hi);
     }
 
-    /** Диапазонный поиск с настройкой включительности границ. */
+    /** SK: Intervalové vyhľadávanie s nastavením inkluzivity hraníc. */
     public List<N> range(N lo, boolean loInc, N hi, boolean hiInc) {
         return super.range(lo, loInc, hi, hiInc);
     }

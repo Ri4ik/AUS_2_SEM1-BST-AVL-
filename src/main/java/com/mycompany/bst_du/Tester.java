@@ -4,8 +4,8 @@ package com.mycompany.bst_du;
 import java.util.*;
 
 /**
- * Тестовый раннер для структуры AVL<N extends EntityNode<N>>.
- * В тестах разрешена рекурсия — для верификации инвариантов.
+ * SK: Testovací bežec pre štruktúru AVL<N extends EntityNode<N>>.
+ * V testoch je povolená rekurzia – používa sa na overenie invariantov.
  */
 public final class Tester {
 
@@ -18,7 +18,7 @@ public final class Tester {
                 Tester::testDeletesVariants,
                 Tester::testRandomFuzzing,
                 Tester::testClear,
-                Tester::testRangeListConsistency // <--- новый тест
+                Tester::testRangeListConsistency // SK: nový test konzistencie polouzavretého intervalu
         );
 
         long t0 = System.nanoTime();
@@ -43,7 +43,7 @@ public final class Tester {
         System.out.println("======================================");
 
         if (failed > 0) {
-            throw new AssertionError("Есть упавшие тесты: " + failed);
+            throw new AssertionError("Zlyhané testy: " + failed);
         }
     }
 
@@ -190,7 +190,7 @@ public final class Tester {
         assertTrue(avl.inOrder().isEmpty(), "inOrder after clear empty");
     }
 
-    /** Новый тест: сверяем rangeHalfOpen против «ручного» эталона по inOrder. */
+    /** SK: Nový test – porovnáva rangeHalfOpen s manuálnym etalónom z inOrder. */
     private static void testRangeListConsistency() {
         AVL<IntNode> avl = new AVL<>();
         for (int v = 0; v < 200; v++) avl.insert(new IntNode(v));
@@ -199,7 +199,7 @@ public final class Tester {
             int a = rnd.nextInt(220), b = rnd.nextInt(220);
             int lo = Math.min(a, b), hi = Math.max(a, b);
             List<IntNode> got = avl.rangeHalfOpen(new IntNode(lo), new IntNode(hi));
-            // Эталон: отфильтровать inOrder по полуинтервалу
+            // SK: Etalón – filtrovanie inOrder podľa polouzavretého intervalu
             List<IntNode> in = avl.inOrder();
             List<IntNode> exp = new ArrayList<>();
             for (IntNode x : in) {
@@ -215,7 +215,7 @@ public final class Tester {
         }
     }
 
-    // ======== helpers/инварианты ========
+    // ======== pomocné metódy a invarianty ========
 
     private static void assertTrue(boolean cond, String msg) {
         if (!cond) throw new AssertionError(msg);
