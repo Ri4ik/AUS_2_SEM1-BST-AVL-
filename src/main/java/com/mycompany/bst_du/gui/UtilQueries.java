@@ -48,6 +48,4 @@ public final class UtilQueries {
             return ctl.modelAllByWorkstationInPeriod(w,f,t);
         } catch (Throwable e){ return java.util.List.of(); }
     }
-    
-    
 }

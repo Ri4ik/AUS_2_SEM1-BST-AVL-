@@ -24,8 +24,8 @@ public final class MainFrame extends JFrame {
     // Результаты в табах
     private final JTabbedPane resultTabs = new JTabbedPane();
     private final JTable testsTable = new JTable(new TestTableModel());
-    private final JTable peopleTable = new JTable(new PatientTableModel()); // будет переключаться на другие модели
-     
+    private final JTable peopleTable = new JTable(new PatientTableModel()); // переключаемые модели
+
     public MainFrame(GuiController ctl) {
         super("PCR Demo System — MVC GUI");
         this.ctl = ctl;
@@ -38,7 +38,7 @@ public final class MainFrame extends JFrame {
         tabs.add("Tests", buildTestsPanel());
         tabs.add("Queries", buildQueriesPanel());
         tabs.add("Sickness (ops 10–16)", buildSicknessPanel());
-        tabs.add("CSV", buildCsvPanel());
+        tabs.add("CSV / Service", buildCsvPanel());
 
         // Результаты
         resultTabs.add("Tests", new JScrollPane(testsTable));
@@ -70,7 +70,6 @@ public final class MainFrame extends JFrame {
                     tfLn.getText().trim(), tfBirth.getText().trim());
             appendLog(msg);
             appendCounts();
-            // Ничего в таблицах менять не нужно
         });
 
         JTextField tfDel = new JTextField(10);
@@ -119,15 +118,11 @@ public final class MainFrame extends JFrame {
         });
 
         JTextField fCode = new JTextField(8);
-        JButton bFind = new JButton("Find Test by Code");
+        JButton bFind = new JButton("Find Test by Code → Tests table");
         bFind.addActionListener(e -> {
-            String line = ctl.findTestByCode(fCode.getText().trim());
-            // Покажем в testsTable (одна строка, если найдено)
-            List<PcrTest> list = ctl.findTestByCode(fCode.getText().trim()).startsWith("Error")
-                    || ctl.findTestByCode(fCode.getText().trim()).startsWith("Not found")
-                    ? java.util.List.of()
-                    : java.util.List.of(); // строковый интерфейс — для таблицы лучше перезагрузить другой кнопкой
-            appendLog(line);
+            List<PcrTest> list = ctl.findTestByCodeAsList(fCode.getText().trim());
+            showTests(list);
+            appendLog(ctl.findTestByCode(fCode.getText().trim()));
         });
 
         JTextField dCode = new JTextField(8);
@@ -149,10 +144,8 @@ public final class MainFrame extends JFrame {
         addRow(p,c,r++, "Value:", tVal);
         addRow(p,c,r++, "Note:", tNote);
         addBtn(p,c,r++, bIns);
-        addRow(p,c,r++, "Find code (prints to log):", fCode);
-        addBtn(p,c,r++, bFind);
-        addRow(p,c,r++, "Delete code:", dCode);
-        addBtn(p,c,r++, bDel);
+        addRow(p,c,r++, "Find code:", fCode); addBtn(p,c,r++, bFind);
+        addRow(p,c,r++, "Delete code:", dCode); addBtn(p,c,r++, bDel);
         return p;
     }
 
@@ -161,18 +154,20 @@ public final class MainFrame extends JFrame {
         JPanel p = new JPanel(new GridBagLayout());
         GridBagConstraints c = gbc();
 
+        // --- op3: tests of patient chrono ---
         JTextField pid = new JTextField(8);
         JButton bPid = new JButton("Tests of Patient (chrono) → Tests table");
         bPid.addActionListener(e -> {
             List<PcrTest> list = com.mycompany.bst_du.gui.UtilQueries.testsOfPatient(ctl, pid.getText().trim());
             showTests(list);
         });
-        
-        
 
-        JTextField dist = new JTextField(6);
+        // --- common dates ---
         JTextField qFrom = new JTextField(10);
         JTextField qToEx = new JTextField(10);
+
+        // --- district ---
+        JTextField dist = new JTextField(6);
         JButton bDistAll = new JButton("District ALL → Tests table");
         bDistAll.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.district(ctl, dist.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), false)
@@ -182,6 +177,7 @@ public final class MainFrame extends JFrame {
                 com.mycompany.bst_du.gui.UtilQueries.district(ctl, dist.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
+        // --- region ---
         JTextField reg = new JTextField(6);
         JButton bRegAll = new JButton("Region ALL → Tests table");
         bRegAll.addActionListener(e -> showTests(
@@ -192,6 +188,7 @@ public final class MainFrame extends JFrame {
                 com.mycompany.bst_du.gui.UtilQueries.region(ctl, reg.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
+        // --- global ---
         JButton bGAll = new JButton("Global ALL → Tests table");
         bGAll.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.global(ctl, qFrom.getText().trim(), qToEx.getText().trim(), false)
@@ -201,14 +198,25 @@ public final class MainFrame extends JFrame {
                 com.mycompany.bst_du.gui.UtilQueries.global(ctl, qFrom.getText().trim(), qToEx.getText().trim(), true)
         ));
 
+        // --- workstation ---
         JTextField ws = new JTextField(8);
         JButton bWs = new JButton("Workstation ALL → Tests table");
         bWs.addActionListener(e -> showTests(
                 com.mycompany.bst_du.gui.UtilQueries.workstation(ctl, ws.getText().trim(), qFrom.getText().trim(), qToEx.getText().trim())
         ));
 
+        // --- op2: Find test of patient (code+pid) ---
+        JTextField f2Code = new JTextField(8);
+        JTextField f2Pid  = new JTextField(8);
+        JButton bFindOp2 = new JButton("Find test of patient (op2) → Tests table");
+        bFindOp2.addActionListener(e -> {
+            List<PcrTest> list = ctl.findTestOfPatientAsList(f2Code.getText().trim(), f2Pid.getText().trim());
+            showTests(list);
+            appendLog(ctl.findTestOfPatient(f2Code.getText().trim(), f2Pid.getText().trim()));
+        });
+
         int r=0;
-        addRow(p,c,r++, "Patient ID:", pid); addBtnInline(p,c,r-1, bPid);
+        addRow(p,c,r++, "Patient ID (op3):", pid); addBtnInline(p,c,r-1, bPid);
         addRow(p,c,r++, "From (YYYY-MM-DD):", qFrom);
         addRow(p,c,r++, "ToEx (YYYY-MM-DD):", qToEx);
         addRow(p,c,r++, "District:", dist);
@@ -217,6 +225,10 @@ public final class MainFrame extends JFrame {
         addBtnInline(p,c,r-1, bRegAll); addBtnInline(p,c,r-1, bRegPos);
         addBtn(p,c,r++, bGAll); addBtn(p,c,r++, bGPos);
         addRow(p,c,r++, "Workstation ID:", ws); addBtn(p,c,r++, bWs);
+
+        addRow(p,c,r++, "op2 Code:", f2Code);
+        addRow(p,c,r++, "op2 Patient ID:", f2Pid);
+        addBtn(p,c,r++, bFindOp2);
 
         return p;
     }
@@ -303,7 +315,7 @@ public final class MainFrame extends JFrame {
         return p;
     }
 
-    // ====== CSV ======
+    // ====== CSV / Service ======
     private JPanel buildCsvPanel() {
         JPanel p = new JPanel(new GridBagLayout());
         GridBagConstraints c = gbc();
@@ -318,10 +330,21 @@ public final class MainFrame extends JFrame {
             appendCounts();
         });
 
+        JButton bClear = new JButton("Clear ALL");
+        bClear.addActionListener(e -> {
+            appendLog(ctl.clearAll());
+            ((TestTableModel) testsTable.getModel()).setData(java.util.List.of());
+            PatientTableModel m = new PatientTableModel();
+            m.setData(java.util.List.of());
+            peopleTable.setModel(m);
+            appendCounts();
+        });
+
         int r=0;
         addRow(p,c,r++, "Directory:", dir);
         addBtn(p,c,r++, bExp);
         addBtn(p,c,r++, bImp);
+        addBtn(p,c,r++, bClear);
 
         return p;
     }
