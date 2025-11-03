@@ -107,16 +107,27 @@ public final class MainFrame extends JFrame {
         JTextField tPos  = new JTextField(4);
         JTextField tVal  = new JTextField(6);
         JTextField tNote = new JTextField(20);
-
+        JCheckBox cbAuto = new JCheckBox("Auto code", true);
+        
         JButton bIns = new JButton("1) Insert Test");
         bIns.addActionListener(e -> {
-            String msg = ctl.insertTest(tCode.getText().trim(), tPid.getText().trim(),
+            String codeStr = cbAuto.isSelected() ? "auto" : tCode.getText().trim();
+            String msg = ctl.insertTest(codeStr, tPid.getText().trim(),
                     tTs.getText().trim(), tWs.getText().trim(), tDist.getText().trim(),
                     tReg.getText().trim(), tPos.getText().trim(), tVal.getText().trim(),
                     tNote.getText());
             appendLog(msg);
             appendCounts();
         });
+//        JButton bIns = new JButton("1) Insert Test");
+//        bIns.addActionListener(e -> {
+//            String msg = ctl.insertTest(tCode.getText().trim(), tPid.getText().trim(),
+//                    tTs.getText().trim(), tWs.getText().trim(), tDist.getText().trim(),
+//                    tReg.getText().trim(), tPos.getText().trim(), tVal.getText().trim(),
+//                    tNote.getText());
+//            appendLog(msg);
+//            appendCounts();
+//        });
 
         JTextField fCode = new JTextField(8);
         JButton bFind = new JButton("18) Find Test by Code → Tests table");
@@ -144,9 +155,11 @@ public final class MainFrame extends JFrame {
                 appendCounts();
             }
         });
-
+        cbAuto.addActionListener(e -> tCode.setEnabled(!cbAuto.isSelected()));
+        tCode.setEnabled(false);
         int r=0;
         addRow(p,c,r++, "Code:", tCode);
+        addBtnInline(p,c,r-1, cbAuto);
         addRow(p,c,r++, "Patient ID:", tPid);
         addRow(p,c,r++, "Timestamp (ISO Instant):", tTs);
         addRow(p,c,r++, "Workstation ID:", tWs);
@@ -446,9 +459,13 @@ public final class MainFrame extends JFrame {
         f.gridx = 0; f.gridy = r; f.gridwidth = 2; f.fill = GridBagConstraints.NONE; f.weightx = 0;
         p.add(b, f);
     }
-    private static void addBtnInline(JPanel p, GridBagConstraints c, int r, JButton b) {
+    private static void addBtnInline(JPanel p, GridBagConstraints c, int r, java.awt.Component b) {
         GridBagConstraints f = (GridBagConstraints)c.clone();
-        f.gridx = 2; f.gridy = r; f.gridwidth = 1; f.fill = GridBagConstraints.NONE; f.weightx = 0;
+        f.gridx = 2; 
+        f.gridy = r; 
+        f.gridwidth = 1; 
+        f.fill = GridBagConstraints.NONE; 
+        f.weightx = 0;
         p.add(b, f);
     }
     private static void addBtnRow(JPanel p, GridBagConstraints c, int r, JButton... buttons) {

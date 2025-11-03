@@ -76,22 +76,32 @@ public final class GuiController {
 
     // ========================= Tests =========================
     public String insertTest(String codeStr, String pid, String instantIso, String wsStr,
-                             String distStr, String regStr, String posStr, String valStr, String note) {
-        try {
-            long code = parseLongStrict(codeStr, "Code");
-            requireNonEmpty(pid, "Patient ID");
-            Instant ts = parseInstantStrict(instantIso, "Timestamp (ISO Instant)");
-            long ws = parseLongStrict(wsStr, "Workstation ID");
-            int dist = parseIntStrict(distStr, "District");
-            int reg = parseIntStrict(regStr, "Region");
-            boolean pos = parseBool10(posStr);
-            double val = parseDoubleStrict(valStr, "Value");
-            PcrTest t = GuiModel.mkTest(code, pid.trim(), ts, ws, dist, reg, pos, val, note == null ? "" : note);
-            boolean ok = model.insertTest(t);
-            return ok ? "Test inserted: " + code : "Test code already exists or patient missing";
-        } catch (Exception e) {
-            return "Error insertTest: " + e.getMessage();
-        }
+                            String distStr, String regStr, String posStr, String valStr, String note) {
+       try {
+           boolean auto = (codeStr == null) || codeStr.isBlank() || "auto".equalsIgnoreCase(codeStr.trim());
+           long ws = Long.parseLong(wsStr);
+           int dist = Integer.parseInt(distStr);
+           int reg = Integer.parseInt(regStr);
+           boolean pos = "1".equals(posStr) || "true".equalsIgnoreCase(posStr);
+           double val = Double.parseDouble(valStr);
+           Instant ts = Instant.parse(instantIso);
+
+           if (auto) {
+               PcrTest t = model.insertTestAuto(pid, ts, ws, dist, reg, pos, val, note);
+               return "Test inserted (auto code): " + t.testCode;
+           } else {
+               long code = Long.parseLong(codeStr);
+               PcrTest t = GuiModel.mkTest(code, pid, ts, ws, dist, reg, pos, val, note);
+               boolean ok = model.insertTest(t);
+               return ok ? "Test inserted: " + code : "Test code already exists or patient missing";
+           }
+       } catch (Exception e) {
+           return "Error insertTest: " + e.getMessage();
+       }
+    }
+    // Auto-code insert passthrough
+    public PcrTest insertTestAuto(String pid, Instant ts, long ws, int dist, int reg, boolean pos, double val, String note) {
+        return model.insertTestAuto(pid, ts, ws, dist, reg, pos, val, note);
     }
 
     public String findTestByCode(String codeStr) {

@@ -21,6 +21,9 @@ public final class GuiModel {
 
     // --- Tests ---
     public boolean insertTest(PcrTest t) { return sys.op1_insertTest(t); }
+    public PcrTest insertTestAuto(String pid, java.time.Instant ts, long ws, int dist, int reg, boolean pos, double val, String note) {
+        return sys.op1_insertTestRandom(pid, ts, ws, dist, reg, pos, val, note);
+    }
     public Optional<PcrTest> findTestByCode(long code) { return sys.op18_findTestByCode(code); }
     public boolean deleteTestByCode(long code) { return sys.op20_deleteTestByCode(code); }
     public int countTests() { return sys.countTests(); }

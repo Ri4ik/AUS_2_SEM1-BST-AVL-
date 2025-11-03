@@ -478,4 +478,35 @@ public final class PcrSystem {
         PatientByIdNode n = idxPatients.find(new PatientByIdNode(patientId, null));
         return (n == null) ? null : n.ref;
     }
+    
+    // === Random unique code generation (náhodný, unikátny) ===
+    private static final long CODE_MIN = 100_000_000L;     // 9-значные коды (можно менять диапазон)
+    private static final long CODE_MAX = 999_999_999L;     // включительно
+
+    private long randomCode() {
+        return java.util.concurrent.ThreadLocalRandom.current().nextLong(CODE_MIN, CODE_MAX + 1);
+    }
+
+    public long genUniqueTestCode() {
+        long code;
+        int attempts = 0;
+        do {
+            code = randomCode();
+            attempts++;
+            if (attempts > 1_000_000)
+                throw new IllegalStateException("Unable to generate unique test code (too many collisions)");
+        } while (idxByCode.find(new TestByCodeNode(code, null)) != null);
+        return code;
+    }
+
+    /** Op1-random: создаёт тест с авто-сгенерированным уникальным кодом и сразу вставляет его. */
+    public PcrTest op1_insertTestRandom(String patientId, Instant timestamp,
+                                        long workstationId, int district, int region,
+                                        boolean positive, double value, String note) {
+        long code = genUniqueTestCode();
+        PcrTest t = new PcrTest(code, patientId, timestamp, workstationId, district, region, positive, value, note);
+        boolean ok = op1_insertTest(t);
+        if (!ok) throw new IllegalStateException("Insert failed (patient missing or duplicate code)");
+        return t;
+    }
 }
